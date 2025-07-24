@@ -1,0 +1,222 @@
+esphome:
+  name: picow
+  friendly_name: picow
+
+rp2040:
+  board: rpipicow
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret picow_api_key
+
+ota:
+  - platform: esphome
+    password: !secret picow_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # manual_ip: 
+  #   static_ip: !secret picow_ip
+  #   gateway: !secret picow_gw
+  #   subnet: 255.255.255.0
+
+  # Enable fallback hotspot in case wifi connection fails
+  ap:
+    ssid: !secret picow_ap_ssid
+    password: !secret picow_ap_password
+
+# Example configuration entry
+# output:
+#   - platform: gpio
+#     pin: GPIO03
+#     id: 'generic_out2'
+# switch:
+#   - platform: output
+#     name: "Generic Output2"
+#     output: 'generic_out2'
+
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO19
+  miso_pin: GPIO16
+  interface: spi
+
+display:
+- platform: ili9xxx
+  model: ili9341
+  id: my_display
+  dc_pin: GPIO00
+  reset_pin: GPIO01
+  cs_pin: GPIO17
+  rotation: 90
+  invert_colors: false
+
+touchscreen:
+- platform: xpt2046
+  id: my_touchscreen
+  cs_pin: GPIO21
+  update_interval: 50ms
+  threshold: 400
+  transform:
+    mirror_x: True
+    mirror_y: False
+    swap_xy: True
+  calibration:
+    x_min: 281
+    x_max: 3848
+    y_min: 347
+    y_max: 3878
+
+######
+# Roboto is an online google font
+# download the ttf file from https://github.com/Pictogrammers/pictogrammers.github.io/tree/main/%40mdi/font/
+# this is the version used https://github.com/Pictogrammers/pictogrammers.github.io/tree/main/%40mdi/font/7.4.47/fonts
+# place it on the HA host into config/esphome/fonts
+# you may need to enable the Terminal and SSH add-on
+
+font:
+  - file: "gfonts://Roboto"
+    id: my_font
+    size: 18
+
+  - file: "gfonts://Roboto"
+    id: my_font_with_icons
+    size: 20
+    bpp: 4
+    extras:
+      - file: "fonts/materialdesignicons-webfont.ttf"
+        glyphs: [
+          "\U000F02D1", # mdi-heart
+          "\U000F05D4", # mdi-airplane-landing
+          "\U000F005D", # mdi:arrow-up
+          "\U000F04DB", # mdi:stop
+          "\U000F0045" # mdi:arrow-down
+        ]
+
+# lvgl
+lvgl:
+  buffer_size: 10%
+  displays:
+    - my_display
+  touchscreens:
+    - my_touchscreen
+  pages:
+      - id: room_page
+        widgets:
+          - obj: # a properly placed coontainer object for all these controls
+              align: CENTER
+              width: 240
+              height: 256
+              x: 4
+              y: 4
+              pad_all: 3
+              bg_opa: TRANSP
+              border_opa: TRANSP
+              layout: # enable the FLEX layout for the children widgets
+                type: FLEX
+                flex_flow: COLUMN_WRAP # the order of the widgets starts top left
+                flex_align_cross: CENTER # they sould be centered
+              widgets:
+                - label:
+                    text: "East"
+                - button:
+                    id: but_cov_up_east
+                    width: 70 # choose the button dimensions so
+                    height: 64 # they fill the columns nincely as they flow
+                    widgets:
+                      - label:
+                          id: cov_up_east
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F005D" # mdi:arrow-up
+                - button:
+                    id: but_cov_stop_east
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_stop_east
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F04DB" # mdi:stop
+                - button:
+                    id: but_cov_down_east
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_down_east
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F0045" # mdi:arrow-down
+
+                - label:
+                    text: "South"
+                - button:
+                    id: but_cov_up_south
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_up_south
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F005D"
+                - button:
+                    id: but_cov_stop_south
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_stop_south
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text:  "\U000F04DB"
+                - button:
+                    id: but_cov_down_south
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_down_south
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text:  "\U000F0045"
+
+                - label:
+                    text: "West"
+                - button:
+                    id: but_cov_up_west
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_up_west
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F005D"
+                - button:
+                    id: but_cov_stop_west
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_stop_west
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text: "\U000F04DB"
+                - button:
+                    id: but_cov_down_west
+                    width: 70
+                    height: 64
+                    widgets:
+                      - label:
+                          id: cov_down_west
+                          align: CENTER
+                          text_font: my_font_with_icons
+                          text:  "\U000F0045"

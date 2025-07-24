@@ -1,0 +1,222 @@
+esphome:
+  name: picow
+  friendly_name: picow
+
+rp2040:
+  board: rpipicow
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret picow_api_key
+
+ota:
+  - platform: esphome
+    password: !secret picow_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip: 
+    static_ip: !secret picow_ip
+    gateway: !secret picow_gw
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot in case wifi connection fails
+  ap:
+    ssid: !secret picow_ap_ssid
+    password: !secret picow_ap_password
+
+# Example configuration entry
+# output:
+#   - platform: gpio
+#     pin: GPIO40
+#     id: 'generic_out'
+# switch:
+#   - platform: output
+#     name: "Generic Output"
+#     output: 'generic_out'
+
+# binary_sensor:
+#   - platform: status
+#     id: lab_status
+#     name: Status sensor
+
+# Enable web server
+web_server:
+  port: 80
+  auth:
+    username: tadmin
+    password: spot2025
+
+captive_portal:
+
+spi:
+  clk_pin: GPIO12
+  mosi_pin: GPIO11
+  miso_pin: GPIO13
+  interface: spi2
+
+display:
+- platform: ili9xxx
+  model: ili9341
+  id: my_display
+  dc_pin: GPIO07
+  reset_pin: GPIO04
+  cs_pin: GPIO10
+  rotation: 0   #  0=Portrait 90 = Landscape
+  invert_colors: false
+
+touchscreen:
+- platform: xpt2046
+  id: my_touchscreen
+  cs_pin: GPIO05
+  interrupt_pin: GPIO15
+  update_interval: 50ms
+  threshold: 400
+  # transform:     #rot = 90
+  #   mirror_x: True
+  #   mirror_y: False
+  #   swap_xy: True
+  transform:
+    mirror_x: True
+    mirror_y: True
+    swap_xy: False
+  calibration:
+    x_min: 281
+    x_max: 3848
+    y_min: 347
+    y_max: 3878
+
+
+
+# lvgl
+lvgl:
+  buffer_size: 25%
+  displays:
+    - my_display
+  touchscreens:
+    - my_touchscreen
+  pages:
+    - id: keypad_page
+      widgets:
+        - led:
+            id: lvgl_led
+            x: 30
+            y: 47
+            color: 0xFF0000
+            brightness: 70%
+        - obj:
+            width: 140
+            height: 25
+            align_to:
+              id: lvgl_led
+              align: OUT_RIGHT_MID
+              x: 17
+            border_width: 1
+            border_color: 0
+            border_opa: 50%
+            pad_all: 0
+            bg_opa: 80%
+            bg_color: 0xFFFFFF
+            shadow_color: 0
+            shadow_opa: 50%
+            shadow_width: 10
+            shadow_spread: 3
+            radius: 5
+            widgets:
+              - label:
+                  id: lvgl_label
+                  align: CENTER
+                  text: "Enter code and \uF00C"
+                  text_align: CENTER
+        - buttonmatrix:
+            id: lvgl_keypad
+            bg_color: 0x808080
+            x: 20
+            y: 85
+            width: 200
+            height: 190
+            items:
+              pressed:
+                bg_color: 0xFFFF00
+            rows:
+              - buttons:
+                  - text: 1
+                    control:
+                      no_repeat: true
+                  - text: 2
+                    control:
+                      no_repeat: true
+                  - text: 3
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: 4
+                    control:
+                      no_repeat: true
+                  - text: 5
+                    control:
+                      no_repeat: true
+                  - text: 6
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: 7
+                    control:
+                      no_repeat: true
+                  - text: 8
+                    control:
+                      no_repeat: true
+                  - text: 9
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: "\uF55A"
+                    key_code: "*"
+                    control:
+                      no_repeat: true
+                  - text: 0
+                    control:
+                      no_repeat: true
+                  - text: "\uF00C"
+                    key_code: "#"
+                    control:
+                      no_repeat: true
+
+key_collector:
+  - source_id: lvgl_keypad
+    min_length: 4
+    max_length: 4
+    end_keys: "#"
+    end_key_required: true
+    back_keys: "*"
+    allowed_keys: "0123456789*#"
+    timeout: 5s
+    on_progress:
+      - if:
+          condition:
+            lambda: return (0 != x.compare(std::string{""}));
+          then:
+            - lvgl.label.update:
+                id: lvgl_label
+                text: !lambda 'return x.c_str();'
+          else:
+            - lvgl.label.update:
+                id: lvgl_label
+                text: "Enter code and \uF00C"
+    on_result:
+      - if:
+          condition:
+            lambda: return (0 == x.compare(std::string{"1234"}));
+          then:
+            - lvgl.led.update:
+                id: lvgl_led
+                color: 0x00FF00
+          else:
+            - lvgl.led.update:
+                id: lvgl_led
+                color: 0xFF0000
