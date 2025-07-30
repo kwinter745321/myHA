@@ -11,7 +11,7 @@ In this video,
  - Walk through a simple LVGL configuration 
 
 The code for this video is available at the GitHub site:
-https://github.com/kwinter745321/ESP32LVGL
+https://github.com/kwinter745321/myHA
 
 Repo:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video46
