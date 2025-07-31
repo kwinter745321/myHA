@@ -3,7 +3,7 @@
 23 July 2025
 
 # Scope
-This is video 46 on Home Assistant and LVGL. Three example displays are shown that are based n the ESPHome Cookbook examples.  This video introduces LVGL on ESPHome. The video explains how to setup the display and touchscreen in ESPHome for an ILI9341 Integrated display.  The Test Rig uses an Raspberry Pi Pico WUSB board connected to an ILI9341 display.
+This is video 46 on Home Assistant and LVGL. Three example displays are shown that are based on the ESPHome Cookbook examples.  This video introduces LVGL on ESPHome. The video explains how to setup the display and touchscreen in ESPHome for an ILI9341 Integrated display.  The Test Rig uses an Raspberry Pi Pico W USB board connected to an ILI9341 display.
 
 In this video, 
  - Demonstrates a few ESPHome cookbook LVGL examples.
