@@ -1,4 +1,13 @@
 
+#
+# helperTemplateSensors-Information.txt
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant ESPHome 7.5
+# Raspberry Pi Pico #(RP2040)
+#
+
+
 13 August 2025
 
 Use the below information to configure helper functions.
