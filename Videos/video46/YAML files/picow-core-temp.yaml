@@ -2,6 +2,15 @@ esphome:
   name: picow
   friendly_name: picow
 
+#
+# picow-core-temp.yaml
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant ESPHome 7.5
+# Raspberry Pi Pico #(RP2040)
+# LVGL 8.4
+#
+
 rp2040:
   board: rpipicow
 
