@@ -1,0 +1,104 @@
+
+#
+# helperTemplateSensors-information.txt
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant ESPHome 7.5
+#
+
+UPDATED 19 August 2025
+
+Added the Hourly sensor jinja2 statements.
+
+13 August 2025
+
+Use the below information to configure helper functions.
+Each of these helper functions have an Entity_id that begins with domain sensor
+
+
+Current Information (helper template sensor)
+############################################
+
+current_temperature
+{{ state_attr('weather.forecast_home','temperature')  }}
+
+
+current_condition
+{{ states['weather.forecast_home'].state  }}
+
+
+Forecast Information (helper template sensor)
+##### DAILY ##########################################
+
+condition_forecast_1
+{{state_attr('sensor.forecast','forecast')[1].condition }}
+
+condition_forecast_2
+{{state_attr('sensor.forecast','forecast')[2].condition }}
+
+condition_forecast_3
+{{state_attr('sensor.forecast','forecast')[3].condition }}
+
+
+For these you can also select
+	Device Class   Temperature
+	State Class Measurement
+	Unit of measurement °F
+
+temperature_high_forecast_1
+{{ state_attr('sensor.forecast','forecast')[1].temperature  }}
+
+temperature_low_forecast_1
+{{ state_attr('sensor.forecast','forecast')[1].templow  }}
+
+temperature_high_forecast_2
+{{ state_attr('sensor.forecast','forecast')[2].temperature  }}
+
+temperature_low_forecast_2
+{{ state_attr('sensor.forecast','forecast')[2].templow  }}
+
+temperature_high_forecast_3
+{{ state_attr('sensor.forecast','forecast')[3].temperature  }}
+
+temperature_low_forecast_3
+{{ state_attr('sensor.forecast','forecast')[3].templow  }}
+
+
+Forecast Information (helper template sensor)
+###### HOURLY #########################################
+
+condition_time1
+{{ state_attr('sensor.forecasthourly', 'forecast')[0].condition  }}
+
+condition_time2
+{{ state_attr('sensor.forecasthourly', 'forecast')[1].condition  }}
+
+condition_time3
+{{ state_attr('sensor.forecasthourly', 'forecast')[2].condition  }}
+
+
+
+forecast_time1
+{{ state_attr('sensor.forecasthourly', 'forecast')[0].datetime[11:16]   }}
+
+forecast_time2
+{{ state_attr('sensor.forecasthourly', 'forecast')[1].datetime[11:16]   }}
+
+forecast_time3
+{{ state_attr('sensor.forecasthourly', 'forecast')[2].datetime[11:16]   }}
+
+
+For these you can also select
+	Device Class   Temperature
+	State Class Measurement
+	Unit of measurement °F
+
+temperature_time1
+{{ state_attr('sensor.forecasthourly', 'forecast')[0].temperature  }}
+
+temperature_time2
+{{ state_attr('sensor.forecasthourly', 'forecast')[1].temperature  }}
+
+temperature_time3
+{{ state_attr('sensor.forecasthourly', 'forecast')[2].temperature  }}
+

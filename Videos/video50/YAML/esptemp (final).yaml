@@ -1,0 +1,981 @@
+esphome:
+  name: esptemp
+  friendly_name: esptemp
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+#
+# esptemp.yaml
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant ESPHome 7.5
+# Raspberry Pi Pico #(RP2040)
+# LVGL 8.4
+#
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret esptemp_apikey
+
+ota:
+  - platform: esphome
+    password: !secret esptemp_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip: 
+    static_ip: !secret esptemp_ip
+    gateway: !secret esptemp_gw
+    subnet: 255.255.255.0
+    
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: esptemp_ap_ssid
+    password: esptemp_ap_password
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+
+captive_portal:
+
+##########################################################################
+
+i2c:
+  - sda: 27
+    scl: 22
+    scan: true
+
+spi:
+  - id: tft
+    clk_pin: 14
+    mosi_pin: 13
+    miso_pin:
+      number: 12
+      ignore_strapping_warning: true
+  - id: touch
+    clk_pin: 25
+    mosi_pin: 32
+    miso_pin: 39
+
+output:
+  - id: backlight_pwm
+    platform: ledc
+    pin: 21
+  - id: output_red
+    platform: ledc
+    pin: 4
+    inverted: true
+  - id: output_green
+    platform: ledc
+    pin: 16
+    inverted: true
+  - id: output_blue
+    platform: ledc
+    pin: 17
+    inverted: true
+
+light:
+  - id: backlight
+    platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    restore_mode: ALWAYS_ON
+  - id: led
+    platform: rgb
+    red: output_red
+    green: output_green
+    blue: output_blue
+    restore_mode: ALWAYS_OFF
+
+display:
+  - id: main_display
+    platform: ili9xxx
+    model: ILI9341
+    spi_id: tft
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number:  2
+      ignore_strapping_warning: true
+    invert_colors: false
+    rotation: 90
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - id: main_touchscreen
+    platform: xpt2046
+    spi_id: touch
+    cs_pin: 33
+    interrupt_pin: 36
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      mirror_x: False
+      mirror_y: False
+      swap_xy: True
+    on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - light.turn_on: backlight
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+
+#### SENSORS #####################################################################
+
+sensor:
+  - platform: homeassistant
+    name: "Home Weather Temperature"
+    id: current_temperature
+    entity_id: weather.forecast_home
+    attribute:  temperature
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temp
+            text: 
+              format: "%.0f °F"
+              args: ['id(current_temperature).state']
+  - platform: homeassistant
+    name: "Forecast Temp Hi 1"
+    id: temphi1
+    entity_id: sensor.temperature_high_forecast_1
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temphi1
+            text: 
+              format: "%.0f °F"
+              args: ['id(temphi1).state']
+  - platform: homeassistant
+    name: "Forecast Temp Low 1"
+    id: templow1
+    entity_id: sensor.temperature_low_forecast_1
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_templow1
+            text: 
+              format: "%.0f °F"
+              args: ['id(templow1).state']
+  - platform: homeassistant
+    name: "Forecast Temp Hi 2"
+    id: temphi2
+    entity_id: sensor.temperature_high_forecast_2
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temphi2
+            text: 
+              format: "%.0f °F"
+              args: ['id(temphi2).state']
+  - platform: homeassistant
+    name: "Forecast Temp Low 2"
+    id: templow2
+    entity_id: sensor.temperature_low_forecast_2
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_templow2
+            text: 
+              format: "%.0f °F"
+              args: ['id(templow2).state']
+  - platform: homeassistant
+    name: "Forecast Temp Hi 3"
+    id: temphi3
+    entity_id: sensor.temperature_high_forecast_3
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temphi3
+            text: 
+              format: "%.0f °F"
+              args: ['id(temphi3).state']
+  - platform: homeassistant
+    name: "Forecast Temp Low 1"
+    id: templow3
+    entity_id: sensor.temperature_low_forecast_3
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_templow3
+            text: 
+              format: "%.0f °F"
+              args: ['id(templow3).state']
+  - platform: homeassistant
+    name: "Forecast Temp Time1"
+    id: temptime1
+    entity_id: sensor.temperature_time1
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temp_time1
+            text: 
+              format: "%.0f °F"
+              args: ['id(temptime1).state']
+  - platform: homeassistant
+    name: "Forecast Temp Time2"
+    id: temptime2
+    entity_id: sensor.temperature_time2
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temp_time2
+            text: 
+              format: "%.0f °F"
+              args: ['id(temptime1).state']
+  - platform: homeassistant
+    name: "Forecast Temp Time1"
+    id: temptime3
+    entity_id: sensor.temperature_time3
+    internal: True
+    unit_of_measurement: "°F"
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_temp_time3
+            text: 
+              format: "%.0f °F"
+              args: ['id(temptime3).state']
+
+
+text_sensor:
+  - platform: homeassistant
+    id: current_condition
+    entity_id: weather.forecast_home
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_condition
+            #text: ! lambda |- return x;
+            text:
+              format: "%s"
+              args: [id(current_condition).state.c_str()]
+        - lvgl.label.update: 
+            id: label_cond_icon
+            text: !lambda |-
+              if (id(current_condition).state == "sunny") return "\U000F0599";
+              else if (id(current_condition).state == "clear-night") return "\U000F0594";
+              else if (id(current_condition).state == "cloudy") return "\U000F0590"; 
+              else if (id(current_condition).state == "exceptional") return "\U000F0F2F";
+              else if (id(current_condition).state == "fog") return "\U000F0591";
+              else if (id(current_condition).state == "hail") return "\U000F0592";
+              else if (id(current_condition).state == "lightning") return "\U000F0593";
+              else if (id(current_condition).state == "lightning-rainy") return "\U000F067E";
+              else if (id(current_condition).state == "partlycloudy") return "\U000F0595";
+              else if (id(current_condition).state == "pouring") return "\U000F0596";
+              else if (id(current_condition).state == "rainy") return "\U000F0597";
+              else if (id(current_condition).state == "snowy") return "\U000F0598";
+              else if (id(current_condition).state == "snowy-rainy") return "\U000F067F";
+              else if (id(current_condition).state == "windy") return "\U000F059D";
+              else if (id(current_condition).state == "windy-variant") return "\U000F059E";
+              else if (id(current_condition).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+        - lvgl.label.update:
+            id: label_cond_icon
+            text_color: !lambda |-
+              if (id(current_condition).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(current_condition).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(current_condition).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: day1
+    entity_id: sensor.condition_forecast_1
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_day1
+            text: !lambda |-
+              if (id(day1).state == "sunny") return "\U000F0599";
+              else if (id(day1).state == "clear-night") return "\U000F0594";
+              else if (id(day1).state == "cloudy") return "\U000F0590"; 
+              else if (id(day1).state == "exceptional") return "\U000F0F2F";
+              else if (id(day1).state == "fog") return "\U000F0591";
+              else if (id(day1).state == "hail") return "\U000F0592";
+              else if (id(day1).state == "lightning") return "\U000F0593";
+              else if (id(day1).state == "lightning-rainy") return "\U000F067E";
+              else if (id(day1).state == "partlycloudy") return "\U000F0595";
+              else if (id(day1).state == "pouring") return "\U000F0596";
+              else if (id(day1).state == "rainy") return "\U000F0597";
+              else if (id(day1).state == "snowy") return "\U000F0598";
+              else if (id(day1).state == "snowy-rainy") return "\U000F067F";
+              else if (id(day1).state == "windy") return "\U000F059D";
+              else if (id(day1).state == "windy-variant") return "\U000F059E";
+              else if (id(day1).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(day1).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(day1).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(day1).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: day2
+    entity_id: sensor.condition_forecast_2
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_day2
+            text: !lambda |-
+              if (id(day2).state == "sunny") return "\U000F0599";
+              else if (id(day2).state == "clear-night") return "\U000F0594";
+              else if (id(day2).state == "cloudy") return "\U000F0590"; 
+              else if (id(day2).state == "exceptional") return "\U000F0F2F";
+              else if (id(day2).state == "fog") return "\U000F0591";
+              else if (id(day2).state == "hail") return "\U000F0592";
+              else if (id(day2).state == "lightning") return "\U000F0593";
+              else if (id(day2).state == "lightning-rainy") return "\U000F067E";
+              else if (id(day2).state == "partlycloudy") return "\U000F0595";
+              else if (id(day2).state == "pouring") return "\U000F0596";
+              else if (id(day2).state == "rainy") return "\U000F0597";
+              else if (id(day2).state == "snowy") return "\U000F0598";
+              else if (id(day2).state == "snowy-rainy") return "\U000F067F";
+              else if (id(day2).state == "windy") return "\U000F059D";
+              else if (id(day2).state == "windy-variant") return "\U000F059E";
+              else if (id(day2).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(day2).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(day2).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(day2).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: day3
+    entity_id: sensor.condition_forecast_3
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_day3
+            text: !lambda |-
+              if (id(day3).state == "sunny") return "\U000F0599";
+              else if (id(day3).state == "clear-night") return "\U000F0594";
+              else if (id(day3).state == "cloudy") return "\U000F0590"; 
+              else if (id(day3).state == "exceptional") return "\U000F0F2F";
+              else if (id(day3).state == "fog") return "\U000F0591";
+              else if (id(day3).state == "hail") return "\U000F0592";
+              else if (id(day3).state == "lightning") return "\U000F0593";
+              else if (id(day3).state == "lightning-rainy") return "\U000F067E";
+              else if (id(day3).state == "partlycloudy") return "\U000F0595";
+              else if (id(day3).state == "pouring") return "\U000F0596";
+              else if (id(day3).state == "rainy") return "\U000F0597";
+              else if (id(day3).state == "snowy") return "\U000F0598";
+              else if (id(day3).state == "snowy-rainy") return "\U000F067F";
+              else if (id(day3).state == "windy") return "\U000F059D";
+              else if (id(day3).state == "windy-variant") return "\U000F059E";
+              else if (id(day3).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(day3).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(day3).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(day3).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: time1
+    entity_id: sensor.condition_time1
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_cond_time1
+            text: !lambda |-
+              if (id(time1).state == "sunny") return "\U000F0599";
+              else if (id(time1).state == "clear-night") return "\U000F0594";
+              else if (id(time1).state == "cloudy") return "\U000F0590"; 
+              else if (id(time1).state == "exceptional") return "\U000F0F2F";
+              else if (id(time1).state == "fog") return "\U000F0591";
+              else if (id(time1).state == "hail") return "\U000F0592";
+              else if (id(time1).state == "lightning") return "\U000F0593";
+              else if (id(time1).state == "lightning-rainy") return "\U000F067E";
+              else if (id(time1).state == "partlycloudy") return "\U000F0595";
+              else if (id(time1).state == "pouring") return "\U000F0596";
+              else if (id(time1).state == "rainy") return "\U000F0597";
+              else if (id(time1).state == "snowy") return "\U000F0598";
+              else if (id(time1).state == "snowy-rainy") return "\U000F067F";
+              else if (id(time1).state == "windy") return "\U000F059D";
+              else if (id(time1).state == "windy-variant") return "\U000F059E";
+              else if (id(time1).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(time1).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(time1).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(time1).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: time2
+    entity_id: sensor.condition_time2
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_cond_time2
+            text: !lambda |-
+              if (id(time2).state == "sunny") return "\U000F0599";
+              else if (id(time2).state == "clear-night") return "\U000F0594";
+              else if (id(time2).state == "cloudy") return "\U000F0590"; 
+              else if (id(time2).state == "exceptional") return "\U000F0F2F";
+              else if (id(time2).state == "fog") return "\U000F0591";
+              else if (id(time2).state == "hail") return "\U000F0592";
+              else if (id(time2).state == "lightning") return "\U000F0593";
+              else if (id(time2).state == "lightning-rainy") return "\U000F067E";
+              else if (id(time2).state == "partlycloudy") return "\U000F0595";
+              else if (id(time2).state == "pouring") return "\U000F0596";
+              else if (id(time2).state == "rainy") return "\U000F0597";
+              else if (id(time2).state == "snowy") return "\U000F0598";
+              else if (id(time2).state == "snowy-rainy") return "\U000F067F";
+              else if (id(time2).state == "windy") return "\U000F059D";
+              else if (id(time2).state == "windy-variant") return "\U000F059E";
+              else if (id(time2).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(time2).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(time2).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(time2).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: time3
+    entity_id: sensor.condition_time3
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_cond_time3
+            text: !lambda |-
+              if (id(time3).state == "sunny") return "\U000F0599";
+              else if (id(time3).state == "clear-night") return "\U000F0594";
+              else if (id(time3).state == "cloudy") return "\U000F0590"; 
+              else if (id(time3).state == "exceptional") return "\U000F0F2F";
+              else if (id(time3).state == "fog") return "\U000F0591";
+              else if (id(time3).state == "hail") return "\U000F0592";
+              else if (id(time3).state == "lightning") return "\U000F0593";
+              else if (id(time3).state == "lightning-rainy") return "\U000F067E";
+              else if (id(time3).state == "partlycloudy") return "\U000F0595";
+              else if (id(time3).state == "pouring") return "\U000F0596";
+              else if (id(time3).state == "rainy") return "\U000F0597";
+              else if (id(time3).state == "snowy") return "\U000F0598";
+              else if (id(time3).state == "snowy-rainy") return "\U000F067F";
+              else if (id(time3).state == "windy") return "\U000F059D";
+              else if (id(time3).state == "windy-variant") return "\U000F059E";
+              else if (id(time3).state == "sunny-off") return "\U000F14E4";
+              else return "\U0000F0599";
+            text_color: !lambda |-
+              if (id(time3).state == "sunny") return lv_color_hex(0xFFFF00); 
+              else if (id(time3).state == "lightning-rainy") return lv_color_hex(0x0000FF);
+              else if (id(time3).state == "rainy") return lv_color_hex(0x00FFFF);
+              else return lv_color_hex(0xFFFFFF);
+  - platform: homeassistant
+    id: forecast_time1
+    entity_id: sensor.forecast_time1
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_dt_time1
+            #text: ! lambda |- return x;
+            text:
+              format: "%s"
+              args: [id(forecast_time1).state.c_str()]
+  - platform: homeassistant
+    id: forecast_time2
+    entity_id: sensor.forecast_time2
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_dt_time2
+            #text: ! lambda |- return x;
+            text:
+              format: "%s"
+              args: [id(forecast_time2).state.c_str()]
+  - platform: homeassistant
+    id: forecast_time3
+    entity_id: sensor.forecast_time3
+    internal: True
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: label_dt_time3
+            #text: ! lambda |- return x;
+            text:
+              format: "%s"
+              args: [id(forecast_time3).state.c_str()]
+
+
+#### FONT ########################################################################################
+
+font:
+  # gfonts://family[@weight]
+  - file: "gfonts://Roboto"
+    id: my_font_18
+    size: 18
+  - file: "gfonts://Roboto"
+    id: my_font_24
+    size: 24
+  - file: "gfonts://Roboto"
+    id: my_font_72
+    size: 72
+
+  - file: 'gfonts://Roboto'
+    id: icon_font
+    size: 60
+    bpp: 4
+    glyphs: >-
+      ! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz°
+    extras: 
+      - file: 'fonts/materialdesignicons-webfont.ttf'
+        glyphs: [
+          "\U000F059A", # mdi-weather-sunset
+          "\U000F059C", # mdi-weather-sunrise
+          "\U000F0594", # clear-night
+          "\U000F0590", # cloudy
+          "\U000F0F2F", # exceptional
+          "\U000F0591", # fog
+          "\U000F0592", # hail
+          "\U000F0593", # lightning
+          "\U000F067E", # lightning-rainy
+          "\U000F0595", # partlycloudy
+          "\U000F0596", # pouring
+          "\U000F0597", # rainy
+          "\U000F0598", # snowy
+          "\U000F067F", # snowy-rainy
+          "\U000F0599", # sunny
+          "\U000F059D", # windy
+          "\U000F059E", # windy-variant
+          "\U000F14E4", # sunny-off
+        ]
+
+  - file: "gfonts://Roboto"
+    id: both_font
+    size: 24
+    bpp: 4
+    glyphs: >-
+      ! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz°
+    extras: 
+      - file: 'fonts/materialdesignicons-webfont.ttf'
+        glyphs: [
+          "\U000F059A", # mdi-weather-sunset
+          "\U000F059C", # mdi-weather-sunrise
+          "\U000F0594", # clear-night
+          "\U000F0590", # cloudy
+          "\U000F0F2F", # exceptional
+          "\U000F0591", # fog
+          "\U000F0592", # hail
+          "\U000F0593", # lightning
+          "\U000F067E", # lightning-rainy
+          "\U000F0595", # partlycloudy
+          "\U000F0596", # pouring
+          "\U000F0597", # rainy
+          "\U000F0598", # snowy
+          "\U000F067F", # snowy-rainy
+          "\U000F0599", # sunny
+          "\U000F059D", # windy
+          "\U000F059E", # windy-variant
+          "\U000F14E4", # sunny-off
+        ]
+
+  - file: "gfonts://Roboto"
+    id: big_font
+    size: 36
+    bpp: 4
+    glyphs: >-
+      ! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz°
+    extras: 
+      - file: 'fonts/materialdesignicons-webfont.ttf'
+        glyphs: [
+          "\U000F059A", # mdi-weather-sunset
+          "\U000F059C", # mdi-weather-sunrise
+          "\U000F0594", # clear-night
+          "\U000F0590", # cloudy
+          "\U000F0F2F", # exceptional
+          "\U000F0591", # fog
+          "\U000F0592", # hail
+          "\U000F0593", # lightning
+          "\U000F067E", # lightning-rainy
+          "\U000F0595", # partlycloudy
+          "\U000F0596", # pouring
+          "\U000F0597", # rainy
+          "\U000F0598", # snowy
+          "\U000F067F", # snowy-rainy
+          "\U000F0599", # sunny
+          "\U000F059D", # windy
+          "\U000F059E", # windy-variant
+          "\U000F14E4", # sunny-off
+        ]
+
+##### UI ##################################################################
+
+# lvgl
+lvgl:
+  buffer_size: 25%
+  displays:
+    - main_display
+  touchscreens:
+    - main_touchscreen
+  on_idle:
+  - timeout: 300s
+    then:
+      - light.turn_off: backlight
+      - lvgl.pause:
+  style_definitions:
+    - id: header_footer
+      bg_color: 0x2F8CD8
+      bg_grad_color: 0x005782
+      bg_grad_dir: VER
+      bg_opa: COVER
+      border_opa: TRANSP
+      radius: 0
+      pad_all: 0
+      pad_row: 0
+      pad_column: 0
+      border_color: 0x0077b3
+      text_color: 0xFFFFFF
+      width: 100%
+      height: 30
+  top_layer:
+    widgets:
+      - buttonmatrix:
+          align: bottom_mid
+          styles: header_footer
+          pad_all: 0
+          outline_width: 0
+          id: top_layer
+          items:
+            styles: header_footer
+          rows:
+            - buttons:
+              - id: page_prev
+                text: "\uF053"
+                on_press:
+                  then:
+                    lvgl.page.previous:
+              - id: page_home
+                text: "\uF015"
+                on_press:
+                  then:
+                    lvgl.page.show: main_page
+              - id: page_next
+                text: "\uF054"
+                on_press:
+                  then:
+                    lvgl.page.next:
+  pages:
+    - id: main_page # Default page
+      bg_color: 0x0
+      #border_width: 2
+      #border_color: 0xC0C0C0
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "Main Page"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+        - obj:
+            width: 316
+            height: 156
+            align: CENTER
+            x: 0
+            y: 12
+            pad_all: 1
+            scrollbar_mode: "off"
+            border_opa: TRANSP
+            bg_opa: TRANSP
+            layout:
+              type: flex
+              flex_flow: ROW_WRAP
+              flex_align_cross: CENTER
+            widgets:
+              - label:
+                  id: label_cond_icon
+                  width: 80
+                  height: 75
+                  text_color: 0xFFFFFF
+                  text_align: CENTER
+                  bg_color: 0x0
+                  text_font: icon_font
+              - label:
+                  id: label_temp
+                  width: 200
+                  height: 75
+                  text_color: 0xFF0000
+                  text_align: CENTER
+                  bg_color: 0x0
+                  text_font: icon_font
+              - label:
+                  id: label_condition
+                  width: 300
+                  height: 25
+                  text_font: both_font
+                  text_color: 0xFFFFFF
+                  text_align: CENTER
+                  bg_color: 0x0
+    - id: day_page
+      bg_color: 0x0
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "Daily Page"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+        - obj:
+            width: 316
+            height: 156
+            align: CENTER
+            x: 0
+            y: 12
+            pad_all: 1
+            scrollbar_mode: "off"
+            border_opa: TRANSP
+            bg_opa: TRANSP
+            layout:
+              type: flex
+              flex_flow: ROW_WRAP
+              flex_align_cross: CENTER
+            widgets:
+              - label:
+                  id: blank_r3c0
+                  width: 70
+                  height: 40
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "Cond:"
+              - label:
+                  id: label_day1
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_day2
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_day3
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_high
+                  width: 70
+                  height: 25              
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "High:"
+              - label:
+                  id: label_temphi1
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_temphi2
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_temphi3
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_low
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "Low:"             
+              - label:
+                  id: label_templow1
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_templow2
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_templow3
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+    - id: hour_page
+      bg_color: 0x0
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "Hourly Page"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+        - obj:
+            width: 316
+            height: 156
+            align: CENTER
+            x: 0
+            y: 12
+            pad_all: 1
+            scrollbar_mode: "off"
+            border_opa: TRANSP
+            bg_opa: TRANSP
+            layout:
+              type: flex
+              flex_flow: ROW_WRAP
+              flex_align_cross: CENTER
+            widgets:
+              - label:
+                  id: hdr_r3c0
+                  width: 70
+                  height: 40
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "Cond:"
+              - label:
+                  id: label_cond_time1
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_cond_time2
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_cond_time3
+                  width: 70
+                  height: 40
+                  text_font: big_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_dt
+                  width: 70
+                  height: 25              
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "Hour:"
+              - label:
+                  id: label_dt_time1
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_dt_time2
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_dt_time3
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_hrtemp
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+                  text: "Temp:"             
+              - label:
+                  id: label_temp_time1
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_temp_time2
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0
+              - label:
+                  id: label_temp_time3
+                  width: 70
+                  height: 25
+                  text_font: both_font
+                  text_color:  0xFFFFFF
+                  bg_color: 0x0

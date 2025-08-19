@@ -1,0 +1,44 @@
+
+#
+# templates.yaml
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant ESPHome 7.5
+# ESP32-Generic
+#
+
+#template.yaml
+  - triggers:
+      - trigger: time_pattern
+        hours: /1
+    action:
+      - service: weather.get_forecasts
+        data:
+          type: daily
+        target:
+          entity_id: weather.forecast_home
+        response_variable: daily
+    sensor:
+      - name: "Forecast"
+        unique_id: forecast
+        state: "{{ daily['weather.forecast_home'].forecast[1].condition }}"
+        attributes:
+          forecast: "{{ daily['weather.forecast_home']['forecast'] }}"
+  - triggers:
+      - trigger: time_pattern
+        hours: /1
+    action:
+      - service: weather.get_forecasts
+        data:
+          type: hourly
+        target:
+          entity_id: weather.forecast_home
+        response_variable: hourly
+    sensor:
+      - name: "ForecastHourly"
+        unique_id: forecasthourly
+        state: "{{ hourly['weather.forecast_home'].forecast[1].condition }}"
+        attributes:
+          forecast: "{{ hourly['weather.forecast_home']['forecast'] }}"
+
+# end  
