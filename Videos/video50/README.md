@@ -17,7 +17,8 @@ In this video,
 ESPHome automated and manual first-install instructions:  https://www.home-assistant.io/integrations/esphome/#required-manual-input
 
 The code for this video is available at the GitHub site:
-https://github.com/kwinter745321/myHA
+https://github.com/kwinter745321/myHA/tree/main/Videos/video50
+
 
 Repo:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video50
