@@ -9,9 +9,9 @@ Although similar to Video 46 this video covers the setup items needed for ESP32 
 To see the controls in a Dashboard.  You may need to add your new ESPHome Device (for example Central) to Integrations.  To do this, click Settings (near bottom of Side pane), then click "Devices & services".  Then click "Add Integration" at bottom-right corner of the page.  Now enter "esphome", then the Host name (in my case "Central") and click Submit.  Back at the Integration page, look for ESPHome under the Configured items. Click the device.  Now you can see info on the device.  One of the items is Controls. It should have a link to add the controls to a Dashboard.
 
 In this video, 
-    • Demonstrates a few ESPHome cookbook LVGL examples.
-    • Present the Test Rig wiring
-    • Walk through a simple LVGL configuration 
+ - Demonstrates a few ESPHome cookbook LVGL examples.
+ - Present the Test Rig wiring
+ - Walk through a simple LVGL configuration 
 
 ESPHome automated and manual first-install instructions:  https://www.home-assistant.io/integrations/esphome/#required-manual-input
 
