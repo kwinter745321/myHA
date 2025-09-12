@@ -1,0 +1,15 @@
+# lab-rssfeed.txt
+
+{% set titles = state_attr('sensor.rss_feed_items', 'titles') %}
+{% set links = state_attr('sensor.rss_feed_items', 'links') %}
+{% set descs = state_attr('sensor.rss_feed_items', 'descs') %}
+
+
+{% for i in range(titles | length) %}
+<h3>
+<li><a href={{links[i]}}>{{titles[i]}}</a></li><b>{{descs[i]}}</b></a>
+</h3>
+{% endfor %}
+
+
+<small>last refreshed at: {{ as_timestamp(states('sensor.rss_feed_items')) | timestamp_custom('%Y-%m-%d %H:%M', true)}}</small>
