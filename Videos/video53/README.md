@@ -7,7 +7,7 @@
 This is video 53 on configuring a Home Assistant ESPHome Device to display RSS News Feeds.  We are using a Waveshare ESP32-S3-LCD-4.3 device with a 800x480 display. Its a wholly integrated device; so no wiring is needed.
 
 In this video, 
- - Demonstrated the News Feed on the display and a dashboard in Home Assistant
+ - Demonstrate the News Feed on the display and a dashboard in Home Assistant
  - Discuss RSS News Feeds and the Home Assistant Feedreader
  - Discuss parsing the data and screen design
  - Discuss test rig configuration
