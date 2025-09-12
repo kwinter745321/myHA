@@ -1,0 +1,502 @@
+esphome:
+  name: esp32news
+  friendly_name: esp32news
+  platformio_options:
+    build_flags: "-DBOARD_HAS_PSRAM"
+    board_build.arduino.memory_type: qio_opi
+    board_build.flash_mode: dio
+    board_upload.maximum_ram_size: 524288
+
+#
+# esptemp.yaml
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant 2025.9.1 ESPHome 8.4
+# esp32-s3-devkitc-1 ESP32-S3-KCD-4.3
+# LVGL 8.4
+#
+
+
+#
+# Author of RGB Display configuration includes this reference:
+# https://gist.githubusercontent.com/itmaybeokay/bd5c7aa574e8ed517148cf9c4c267bdb/raw/e6290a4acd22c6dc6712827ab76608f654871ba9/panel.yaml
+#
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
+      CONFIG_ESP32S3_DATA_CACHE_64KB: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret esp32news_api
+
+ota:
+  - platform: esphome
+    password: !secret esp32news_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip: 
+    static_ip: 192.168.68.57
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret esp32news_ap_ssid
+    password: !secret esp32news_ap_password
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+  
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    
+captive_portal:
+
+i2c:
+  sda: GPIO08
+  scl: GPIO09
+# scan: True
+  id: bus_a
+
+ch422g:
+  - id: ch422g_hub
+#      address: 0x24 
+# Of the CH422's twenty-four i2c addresses, 0x24 is the correct one to use in the setup here. 
+# Still, wow, that's a lot of i2c addresses.
+
+########################################
+
+# Define display
+display:
+  - platform: rpi_dpi_rgb
+    id: my_display
+    auto_clear_enabled: false
+    color_order: RGB
+    pclk_frequency: 16MHZ
+    dimensions:
+      width: 800
+      height: 480
+    de_pin:
+      number: 5
+    hsync_pin:
+      number: 46
+      ignore_strapping_warning: true
+    vsync_pin:
+      number: 3
+      ignore_strapping_warning: true
+    pclk_pin: 7
+    reset_pin:
+      ch422g: ch422g_hub
+      number: 3
+    enable_pin:
+      ch422g: ch422g_hub
+      number: 2  
+    hsync_back_porch: 16
+    hsync_front_porch: 16
+    hsync_pulse_width: 8
+    vsync_back_porch: 16
+    vsync_front_porch: 16
+    vsync_pulse_width: 8
+    data_pins:
+      red:
+        - 1         #r3
+        - 2         #r4
+        - 42        #r5
+        - 41        #r6
+        - 40        #r7
+      blue:
+        - 14        #b3
+        - 38        #b4
+        - 18        #b5
+        - 17        #b6
+        - 10        #b7
+      green:
+        - 39        #g2
+        - 0         #g3
+        - 45        #g4
+        - 48        #g5
+        - 47        #g6
+        - 21        #g7
+
+touchscreen:
+  platform: gt911
+  id: my_touch
+  # Uncomment below if you got the janky OTHER i2c address this time 
+  #address: 0x14  
+  # Probably fixed by adding reset_pin via CH422 though
+  interrupt_pin: GPIO4
+  # DEFINE RESET PIN for consistent i2c address selection
+  # CTP_RST is wired to IO1 of CH422G
+  reset_pin:
+    ch422g: ch422g_hub
+    number: 1
+    mode: OUTPUT
+  on_touch:
+    - lambda: |-
+        ESP_LOGI("Touch", "Touch detected at x=%d, y=%d", touch.x, touch.y);
+
+##############################################################
+
+# Define fonts
+font:
+  - file: "gfonts://Roboto"
+    id: roboto24
+    size: 24
+    bpp: 4
+  - file: "gfonts://Roboto"
+    id: roboto16
+    size: 16
+    bpp: 4
+  - file: "gfonts://Roboto" 
+    id: roboto20_latin1
+    size: 20
+    bpp: 4
+    glyphs:
+      # Basic ASCII characters
+      - " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+      # ISO 8859-1 Latin-1 Supplement characters (partial list for example)
+      - "¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿"    # latin-1 Supplement 0xA1
+      - "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß"  # latin-1 Supplement 0xC0
+      - "àáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"  # latin-1 Supplement 0xE0
+
+##############################################################
+
+globals:
+  - id: arrtitles
+    type: std::vector<std::string>
+    initial_value: '{"zero","one","two","three","four"}'
+  - id: arrlinks
+    type: std::vector<std::string>
+    initial_value: '{"zero","one","two","three","four"}'
+  - id: arrdescs
+    type: std::vector<std::string>
+    initial_value: '{"zero","one","two","three","four"}'
+
+text_sensor:
+  - platform: homeassistant
+    id:  rsstime
+    entity_id: sensor.list_news
+    internal: True
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: label_time
+            text: !lambda |-
+              std::string time = x.c_str();
+              std::string s = time.substr(0,19);
+              return {s};
+
+  - platform: homeassistant
+    id:  rsstitles
+    entity_id: sensor.list_news
+    attribute: titles
+    internal: True
+  - platform: homeassistant
+    id:  rsslinks
+    entity_id: sensor.list_news
+    attribute: links
+    internal: True
+  - platform: homeassistant
+    id:  rssdescs
+    entity_id: sensor.list_news
+    attribute: descs
+    internal: True
+  - platform: template
+    id: parsed_titles
+    update_interval: 20s
+    lambda: |-
+      std::string s = id(rsstitles).state; 
+      id(arrtitles).clear();
+      s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+      s.erase(std::remove(s.begin(), s.end(), '\r'), s.end());
+      size_t pos = 0;
+      std::string delimiter = ";";
+      std::string token;
+      int size = 38;
+      while ((pos = s.find(delimiter, 0)) != std::string::npos) {
+        token = s.substr(0, pos);
+        std::string result = token;
+        for (int i=size; i < result.length();  i += (size + 1)) {
+          result.insert(i, "\n");
+        }
+        id(arrtitles).push_back(result);
+        s.erase(0, pos + delimiter.length() );
+      }
+      id(arrtitles).push_back(s);
+      return {s};
+  - platform: template
+    id: parsed_links
+    update_interval: 20s
+    lambda: |-
+      std::string s = id(rsslinks).state; 
+      id(arrlinks).clear();
+      s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+      s.erase(std::remove(s.begin(), s.end(), '\r'), s.end());
+      size_t pos = 0;
+      std::string delimiter = ";";
+      std::string token;
+      while ((pos = s.find(delimiter, 0)) != std::string::npos) {
+        token = s.substr(0, pos);
+        id(arrlinks).push_back(token);
+        s.erase(0, pos + delimiter.length() );
+      }
+      id(arrlinks).push_back(s);
+      return {s};
+  - platform: template
+    id: parsed_descs
+    update_interval: 20s
+    lambda: |-
+      std::string s = id(rssdescs).state; 
+      id(arrdescs).clear();
+      s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+      s.erase(std::remove(s.begin(), s.end(), '\r'), s.end());
+      size_t pos = 0;
+      std::string delimiter = ";";
+      std::string token;
+      while ((pos = s.find(delimiter, 0)) != std::string::npos) {
+        token = s.substr(0, pos);
+        id(arrdescs).push_back(token);
+        s.erase(0, pos + delimiter.length() );
+      }
+      id(arrdescs).push_back(s);
+      return {s};
+    on_value: 
+      - lvgl.label.update:
+          id: label_title1
+          text:
+            format: "%s"
+            args: id(arrtitles)[0].c_str()
+      - lvgl.label.update:
+          id: label_title2
+          text:
+            format: "%s"
+            args: id(arrtitles)[1].c_str()
+      - lvgl.label.update:
+          id: label_title3
+          text:
+            format: "%s"
+            args: id(arrtitles)[2].c_str()
+      - lvgl.label.update:
+          id: label_title4
+          text:
+            format: "%s"
+            args: id(arrtitles)[3].c_str()
+      - lvgl.label.update:
+          id: label_title5
+          text:
+            format: "%s"
+            args: id(arrtitles)[4].c_str()
+
+##############################################################
+lvgl:
+  displays:
+    - my_display
+  update_interval: 1s
+  touchscreens:
+    - my_touch
+  on_idle:
+    timeout: 60s
+    then:
+      - lvgl.label.update:
+          id: label_desc
+          text: "Description"
+      - logger.log:
+                # Log the idle status
+                level: INFO
+                format: "****Touchscreen has been idle for more than 60 seconds."
+  bg_color: 0x000000
+  theme:
+    button:
+      #bg_color: 0x333333
+      #bg_grad_dir: VER
+      text_color: 0xFFFFFF
+      border_width: 1
+      border_color: 0xC0C0C0
+      checked:
+        bg_color: 0xcc9900
+        text_color: 0x000000
+        bg_grad_color: 0x664d00
+      pressed:
+        border_color: 0xff6600
+  pages:
+    - id: main_page
+      layout:
+        type: grid
+        grid_columns: [FR(1), FR(1)]
+        grid_rows: [FR(1), FR(2), FR(2), FR(2), FR(2), FR(2)]
+      width: 100%
+      bg_color: 0x000000
+      bg_opa: cover
+      pad_all: 5
+      widgets:
+        - obj:
+            id: obj_time
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 0
+            grid_cell_column_span: 2
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            text_align: CENTER
+            bg_color: 0x654321
+            border_width: 1
+            border_color: 0xC0C0C0
+            widgets:
+              - label:
+                  id: label_time
+                  text_font: roboto16
+                  text_color: 0xffff00
+        - label:
+            id: label_desc
+            grid_cell_column_pos: 1
+            grid_cell_row_pos: 1
+            grid_cell_row_span: 5
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            bg_color: 0x654321
+            border_width: 1
+            border_color: 0xC0C0C0
+            text_font: roboto20_latin1
+            text_align: CENTER
+            text_color: 0xffffff
+        - button:
+            id: btn1
+            checkable: true
+            bg_color: 0x330066
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 1
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            widgets:
+              - label:
+                  id: label_title1
+                  text_font: roboto20_latin1
+                  text_align: CENTER
+                  text: "1"
+            on_value: 
+              - lvgl.button.update:
+                  id: btn1
+                  state:
+                    checked: false
+              - lvgl.label.update:
+                  id: label_desc
+                  text:
+                    format: "%s"
+                    args: id(arrdescs)[0].c_str()
+        - button:
+            id: btn2
+            checkable: true
+            bg_color: 0x00008b
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 2
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            widgets:
+              - label:
+                  id: label_title2
+                  text_font: roboto20_latin1
+                  text_align: CENTER
+                  text: "2"
+            on_value: 
+              - lvgl.button.update:
+                  id: btn2
+                  state:
+                    checked: false
+              - lvgl.label.update:
+                  id: label_desc
+                  text:
+                    format: "%s"
+                    args: id(arrdescs)[1].c_str()
+        - button:
+            id: btn3
+            checkable: true
+            bg_color: 0x006400
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 3
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            widgets:
+              - label:
+                  id: label_title3
+                  text_font: roboto20_latin1
+                  text_align: CENTER
+                  text: "3"
+            on_value: 
+              - lvgl.button.update:
+                  id: btn3
+                  state:
+                    checked: false
+              - lvgl.label.update:
+                  id: label_desc
+                  text:
+                    format: "%s"
+                    args: id(arrdescs)[2].c_str()
+        - button:
+            id: btn4
+            checkable: true
+            bg_color: 0x8b4000
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 4
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            widgets:
+              - label:
+                  id: label_title4
+                  text_font: roboto20_latin1
+                  text_align: CENTER
+                  text: "4"
+            on_value: 
+              - lvgl.button.update:
+                  id: btn4
+                  state:
+                    checked: false
+              - lvgl.label.update:
+                  id: label_desc
+                  text:
+                    format: "%s"
+                    args: id(arrdescs)[3].c_str()
+        - button:
+            id: btn5
+            checkable: true
+            bg_color: 0x8b0000
+            grid_cell_column_pos: 0
+            grid_cell_row_pos: 5
+            grid_cell_x_align: STRETCH
+            grid_cell_y_align: STRETCH
+            widgets:
+              - label:
+                  id: label_title5
+                  text_font: roboto20_latin1
+                  text_align: CENTER
+                  text: "5"
+            on_value: 
+              - lvgl.button.update:
+                  id: btn5
+                  state:
+                    checked: false
+              - lvgl.label.update:
+                  id: label_desc
+                  text:
+                    format: "%s"
+                    args: id(arrdescs)[4].c_str()

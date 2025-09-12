@@ -1,0 +1,82 @@
+#
+# templates.yaml
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant 2025.9.1 ESPHome 8.4
+# esp32-s3-devkitc-1 ESP32-S3-KCD-4.3
+# LVGL 8.4
+#
+#
+#templete
+  - trigger:
+    - trigger: event
+      event_type: feedreader
+    actions:
+      - variables:
+          rss_titles: "{{ state_attr('sensor.rss_feed_items', 'titles')  }}"
+          rss_links: "{{ state_attr('sensor.rss_feed_items', 'links')    }}"
+          rss_descs: "{{ state_attr('sensor.rss_feed_items', 'descs')    }}"
+          event_title: "{{ trigger.event.data.title      | replace(';','')  | replace('\u2018', '') | replace('\u2019', '') }}"
+          event_link: "{{ trigger.event.data.link        | replace(';','')  | replace('\u2018', '') | replace('\u2019', '') }}"
+          event_desc: "{{ trigger.event.data.description | replace(';','')  | replace('\u2018', '') | replace('\u2019', '') }}"
+    sensor:
+      - name: RSS Feed Items
+        unique_id: rssfeed1
+        icon: mdi:newspaper
+        state: >
+          {{ now() }}
+        attributes:
+          titles: >
+            {% if rss_titles == None %}
+              {% set rss_titles = [] %}
+            {% endif %}
+            {% if (event_title not in rss_titles) and (event_link not in rss_links)  %}
+              {% set rss_titles = [event_title] +  rss_titles %}
+            {% endif %}
+            {{ rss_titles[:5] }}
+          links: >
+            {% if rss_link == None %}
+              {% set rss_links = [] %}
+            {% endif %}
+            {% if (event_title not in rss_titles) and (event_link not in rss_links) %}
+              {% set rss_links = [event_link] + rss_links %}
+            {% endif %}
+            {{ rss_links[:5]  }}  
+          descs: >
+            {% if rss_descs == None %}
+              {% set rss_descs = [] %}
+            {% endif %}
+            {% if (event_title not in rss_titles) and (event_link not in rss_links) %}
+              {% set rss_descs = [event_desc] + rss_descs %}
+            {% endif %}
+            {{ rss_descs[:5]  }}  
+  - trigger:
+    - trigger: event
+      event_type: feedreader
+    actions:
+      - variables:
+          rss_titles: "{{ state_attr('sensor.rss_feed_items', 'titles') | replace(';','')   }}"
+          rss_links: "{{ state_attr('sensor.rss_feed_items', 'links')   | replace(';','')   }}"
+          rss_descs: "{{ state_attr('sensor.rss_feed_items', 'descs')   | replace(';','')   }}"
+    sensor:
+      - name: List News
+        unique_id: listnews1
+        icon: mdi:newspaper
+        state: >
+          {{ now() }}
+        attributes:
+          titles: >
+            {% set titles = state_attr('sensor.rss_feed_items', 'titles') %}
+            {% for i in range(titles | length) %}
+                {{titles[i]}};
+            {% endfor %}
+          links: >
+            {% set links = state_attr('sensor.rss_feed_items', 'links') %}
+            {% for i in range(links | length) %}
+                {{links[i]}};
+            {% endfor %}
+          descs: >
+            {% set descs = state_attr('sensor.rss_feed_items', 'descs') %}
+            {% for i in range(descs | length) %}
+                {{descs[i]}};
+            {% endfor %}

@@ -1,4 +1,11 @@
 # lab-rssfeed.txt
+#
+# Copyright (C) 2025 KW Services.
+# MIT License
+# Home Assistant 2025.9.1 ESPHome 8.4
+# esp32-s3-devkitc-1 ESP32-S3-KCD-4.3
+# LVGL 8.4
+#
 
 {% set titles = state_attr('sensor.rss_feed_items', 'titles') %}
 {% set links = state_attr('sensor.rss_feed_items', 'links') %}
