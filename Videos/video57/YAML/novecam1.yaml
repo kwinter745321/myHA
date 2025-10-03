@@ -26,7 +26,7 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: "AovDrsIzjmnbPxhvezkVrXqXoFeMJA/vqaSLIvk136A="   #freenove_apikey
+    key: freenove_apikey
 
 ota:
   - platform: esphome

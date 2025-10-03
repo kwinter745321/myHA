@@ -29,7 +29,7 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: "qS++fyc5473BGBK33SLuCQojtbf4g0/BXsstTNGQ5nQ="   #foriot_apikey
+    key: foriot_apikey
     
 ota:
   - platform: esphome
