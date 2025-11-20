@@ -1,0 +1,402 @@
+esphome:
+  name: roundlcd
+  friendly_name: roundlcd
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret roundlcd_api
+
+ota:
+  - platform: esphome
+    password: !secret roundlcd_ota_pwd
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip: 
+    static_ip: 192.168.68.123
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret roundlcd_ap_ssid
+    password: !secret roundlcd_ap_pwd
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+  
+captive_portal:
+
+#
+# https://community.home-assistant.io/t/2424s012-round-display-lvgl/868243
+# Example of LVGL setup
+#
+
+substitutions:
+  devicename: round-display
+  friendname: Round Display
+  mediaplayer: media_player.owntone_server # Replace with a suitable media player entity you want to control
+  weather: sensor.weather # Replace with a suitable weather entity from your home assistant
+  screensaver: 5 min # Timeout for how long the screen should stay on after the last interaction
+  sdapin: GPIO4
+  sclpin: GPIO5
+  tint: GPIO0
+  tres: GPIO1
+  dcpin: GPIO2
+  bkpin: GPIO3
+  clpin: GPIO6
+  mopin: GPIO7
+  cspin: GPIO10
+
+script:
+  - id: screentime
+    mode: restart
+    then:
+      - light.turn_on: back_light
+      - delay: $screensaver
+      - light.turn_off: back_light
+  - id: screenoff
+    then:
+      - script.stop: screentime
+      - light.turn_off: back_light
+
+output:
+  - platform: ledc
+    pin: GPIO6
+    id: gpio_6_backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: gpio_6_backlight_pwm
+    name: "Display Backlight"
+    id: back_light
+    restore_mode: ALWAYS_OFF
+    on_turn_off: 
+      then:
+        - lvgl.pause:
+            show_snow: true
+    on_turn_on: 
+      then:
+        - lvgl.resume:
+
+spi:
+  mosi_pin: GPIO11
+  clk_pin: GPIO12
+  miso_pin: GPIO13
+
+i2c:
+  sda: GPIO8
+  scl: GPIO9
+  scan: true
+  id: ic_bus
+
+display:
+  - platform: ili9xxx
+    model: GC9A01A
+    id: watchface
+    reset_pin: GPIO5
+    cs_pin: GPIO10
+    dc_pin: GPIO4
+    rotation: 180
+    invert_colors: True
+    color_order: BGR
+
+touchscreen:
+  - platform: cst816
+    id: touch
+    interrupt_pin: GPIO15
+    reset_pin: GPIO16
+    transform:
+      mirror_x: true
+      #mirror_y: false
+    skip_probe: True
+    on_update:
+      - script.execute: screentime
+      - lambda: |-
+            for (auto touch: touches)  {
+                if (touch.state <= 2) {
+                  ESP_LOGI("Touch points:", "id=%d x=%d, y=%d", touch.id, touch.x, touch.y);
+                }
+            }
+
+###########################################################
+
+
+font:
+  - file: "gfonts://Roboto"
+    id: roboto40
+    size: 40
+    glyphsets:
+      - GF_Latin_Kernel
+  - file: "gfonts://Roboto"
+    id: roboto28
+    size: 28
+    glyphsets:
+      - GF_Latin_Kernel
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+# Update the clock hands every second
+    on_time:
+      - seconds: /1
+        then:
+          - lvgl.indicator.update:
+              id: second_hand_indic
+              value: !lambda return id(homeassistant_time).now().second;
+          - lvgl.indicator.update:
+              id: minute_hand_indic
+              value: !lambda return id(homeassistant_time).now().minute;
+          - lvgl.indicator.update:
+              id: hour_hand_indic
+              value: !lambda |-
+                float hr = (id(homeassistant_time).now().hour % 12) * 5.0;
+                float nudge = (id(homeassistant_time).now().minute / 12);
+                hr = hr + nudge;
+                if (hr == 60.0) {
+                  hr = 0.0;
+                }
+                return hr;
+
+# https://community.home-assistant.io/t/how-to-get-the-time-in-an-esphome-configuration/702106/3
+
+sensor:
+  - platform: homeassistant
+    id: outdoor_temperature
+    entity_id: weather.forecast_home
+    unit_of_measurement: "°F"
+    attribute: temperature
+    internal: True
+    on_value: 
+      then:
+        - lvgl.label.update:
+            id: temp_widget
+            text: 
+              format: "%.1f°F"
+              args: [ 'id(outdoor_temperature).state' ]
+
+text_sensor:
+  - platform: template
+    name: "Current Time"
+    id: current_time
+    update_interval: 10s
+    lambda: return  id(homeassistant_time).now().strftime("%H:%M:%S");
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: time_widget
+            text:
+              format: "%s"
+              args: [ 'id(current_time).state.c_str()']
+  - platform: template
+    name: "Current Date"
+    id: current_date
+    update_interval: 10s
+    lambda: return  id(homeassistant_time).now().strftime("%d %B");
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: date_widget
+            text:
+              format: "%s"
+              args: [ 'id(current_date).state.c_str()']
+  - platform: template
+    name: "Current Date2"
+    id: current_date2
+    update_interval: 10s
+    lambda: return  id(homeassistant_time).now().strftime("%Y-%m-%d");
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: date2_widget
+            text:
+              format: "%s"
+              args: [ 'id(current_date2).state.c_str()']
+  - platform: template
+    name: "Day of Week"
+    id: current_dow
+    #update_interval: 10s
+    lambda: return  id(homeassistant_time).now().strftime("%a %d");
+    on_value: 
+      then:
+        - lvgl.label.update: 
+            id: dow_widget
+            text:
+              format: "%s"
+              args: [ 'id(current_dow).state.c_str()']
+
+
+color:
+  - id: blue
+    hex: 0000FF  # or 1E90FF
+  - id: red
+    hex: FF0000
+  - id: green
+    hex: 88E788
+  - id: white
+    hex: FFFFFF
+
+
+# https://community.home-assistant.io/t/lvgl-using-a-date-stamp-as-a-label-at-compile-time/777605/4
+
+lvgl:
+  buffer_size: 25%
+  bg_color: 0
+  top_layer:
+    widgets:
+      - button:
+          id: page_next
+          align: CENTER
+          x: 40
+          y: 0
+          width: 35
+          height: 20
+          text_color: blue
+          on_short_click:
+            then:
+              lvgl.page.next
+          widgets:
+            - label: 
+                align: center
+                text: ">"
+  pages:
+    - id: time_page
+      widgets:
+        - meter:
+            id: clock_meter
+            align: center
+            width: 238
+            height: 238
+            bg_color: 0
+            border_color: 0
+            border_width: 2
+            text_color: white
+            scales:
+              - ticks:    # minutes
+                  color: white
+                  count: 60
+                  length: 3
+                range_from: 0
+                range_to: 60
+                angle_range: 360
+                rotation: 270
+                indicators:
+                  - line: # Second hand
+                        id: second_hand_indic
+                        width: 2
+                        color: red
+                        r_mod: -10 # Modify radius to adjust length
+                  - line: # Minute hand
+                      id: minute_hand_indic
+                      width: 3
+                      color: green
+                      r_mod: -1 # Closer to edge
+                  - line: # Hour hand
+                      id: hour_hand_indic
+                      width: 4
+                      color: green
+                      r_mod: -40 # Shorter
+              - ticks:    # hours
+                  color: white
+                  width: 1
+                  count: 12
+                  length: 1
+                  major:
+                    color: white
+                    stride: 1
+                    length: 6
+                    label_gap: 15
+                range_from: 1
+                range_to: 12
+                angle_range: 330
+                rotation: 300
+        - label:
+            id: temp_widget
+            align: CENTER
+            y: -35
+            text_color: white
+            text: 
+              format: "%.1f°"
+              args: [ id(outdoor_temperature).state ]
+            on_short_click:
+              then:
+                - script.execute: screenoff
+        - label:
+            id: dow_widget
+            align: CENTER
+            x: -50
+            y: 0
+            text_color: white
+            border_color: red
+            border_width: 1
+            on_short_click:
+              then:
+                - script.execute: screenoff
+        - label:
+            id: date_widget
+            align: CENTER
+            y: 35
+            text_color: white
+            on_short_click:
+              then:
+                - script.execute: screenoff
+    - id: page2
+      widgets:
+        - meter:
+            id: digital_meter
+            align: center
+            width: 238
+            height: 238
+            bg_color: 0
+            border_color: 0
+            border_width: 2
+            text_color: white
+            scales:
+              - ticks:
+                  color: white
+                  count: 60
+                  length: 5
+                range_from: 0
+                range_to: 60
+                angle_range: 360
+                rotation: 270
+                indicators:
+                  - tick_style:
+                        start_value: 0
+                        end_value: 60
+                        color_start: red
+                        color_end: blue
+                        local: true
+                        width: 5
+        - label:
+            id: time_widget
+            align: CENTER
+            y: -45
+            text_color: red
+            text_font: roboto40
+            on_short_click:
+              then:
+                - script.execute: screenoff
+        - label:
+            id: date2_widget
+            align: CENTER
+            y: 45
+            text_color: red
+            text_font: roboto28
+            on_short_click:
+              then:
+                - script.execute: screenoff
