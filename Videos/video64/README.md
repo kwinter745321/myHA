@@ -23,3 +23,6 @@ The YAML files for the two ESP32 devices.
  - roundc3.yaml - Manages the hardware and LVGL UI for the DIYmalls ESP32-2424S012
  - roundlcd.yaml - Manages the hardware and LVGL UI for the Waveshare 1.28 inch Touch Display
  
+# Extra-information
+
+Found a chematic for the DIYmalls 1.28 Touch Display with ESP32-C3 (ESP32-2424S012).
