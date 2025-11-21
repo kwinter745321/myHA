@@ -25,4 +25,4 @@ The YAML files for the two ESP32 devices.
  
 # Extra-information
 
-Found a chematic for the DIYmalls 1.28 Touch Display with ESP32-C3 (ESP32-2424S012).
+Found a schematic for the DIYmalls 1.28 Touch Display with ESP32-C3 (ESP32-2424S012).
