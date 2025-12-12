@@ -27,3 +27,5 @@ https://github.com/kwinter745321/myHA/tree/main/Videos/video67
    - Scale2.png (slightly different length)
    - Button48L.png (part of a freepik.com image)
    - Button48R.png (part of a freepik.com image)
+
+Some images used in this video and code were freely obtained at www.freepik.com
