@@ -1,0 +1,253 @@
+esphome:
+  name: n16r8b
+  friendly_name: n16r8b
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: ESP32S3
+  framework:
+    type: esp-idf
+  flash_size: 16MB
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret n16r8b_api_key
+
+ota:
+  - platform: esphome
+    password: !secret n16r8b_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  #use_address: 192.168.68.102
+  manual_ip: 
+    static_ip: 192.168.68.102
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: !secret n16r8b_ap_ssid
+    password: !secret n16r8b_ap_password
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+
+captive_portal:
+
+
+#########################
+
+output:
+  - id: backlight_pwm
+    platform: ledc
+    pin: 15
+
+light:
+  - id: backlight
+    platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    restore_mode: ALWAYS_ON
+
+###################################
+
+image:
+  - id: knob_image
+    type: RGB565
+    transparency: alpha_channel
+    file: images/Arrow.png
+  - id: button_right
+    type: RGB565
+    transparency: alpha_channel
+    file: images/Button48R.png
+  - id: button_left
+    type: RGB565
+    transparency: alpha_channel
+    file: images/Button48L.png
+  - id: scale
+    type: RGB565
+    file: images/Scale.png
+
+###################################
+spi:
+  - id: tft
+    clk_pin: 12
+    mosi_pin: 11
+    miso_pin: 13
+      # number: 12
+      # ignore_strapping_warning: true
+  # - id: touch
+  #   clk_pin: 12
+  #   mosi_pin: 11
+  #   miso_pin: 13
+
+display:
+  - id: main_display
+    platform: ili9xxx
+    model: ILI9341
+    spi_id: tft
+    cs_pin: 10
+    reset_pin: 4
+    dc_pin: 7
+    invert_colors: false
+    rotation: 90
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - id: main_touchscreen
+    platform: xpt2046
+    spi_id: tft
+    cs_pin: 5
+    interrupt_pin: 9
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      mirror_x: True
+      mirror_y: False
+      swap_xy: True
+    on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - light.turn_on: backlight
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+
+###########################################################
+
+lvgl:
+  buffer_size: 25%
+  displays:
+    - main_display
+  touchscreens:
+    - main_touchscreen
+  on_idle:
+  - timeout: 300s
+    then:
+      - light.turn_off: backlight
+      - lvgl.pause:
+  pages:
+    - id: main_page
+      bg_color: 0xFFFFFF
+      widgets:
+        - label:
+            id: label_slider
+            x: 80
+            y: 180
+            text_color: 0x0
+            #bg_color: 0x0
+            text_font: montserrat_32    
+            text: "Value: 50"
+        - obj:
+            id: cont_id
+            align: CENTER
+            width: 90%
+            height: 70
+            border_width: 1
+            border_color: 0x0
+            scrollbar_mode: "OFF"
+            widgets:
+            - slider:
+                id: slider_id
+                x: 10
+                y: 0
+                width: 250
+                value: 50
+                min_value: 0
+                max_value: 100
+                border_width: 1
+                knob:
+                  #bg_color: 0x90EE90
+                  bg_color: 0xFFFFFF
+                  bg_opa:  0%
+                  bg_image_src: knob_image
+                  bg_image_opa: 100%
+                  border_width: 0
+                  pad_all: 16
+                on_release:
+                  - lvgl.label.update:
+                      id: label_slider
+                      text: 
+                        format: "Value: %d"
+                        args: [int(x)]
+            - image:
+                id: scale_id
+                src: scale
+                align_to:
+                  id: slider_id
+                  align: CENTER
+                  x: 7
+                  y: 30
+        - button:
+            id: slide_inc
+            x: 240
+            y: 180
+            width: 48
+            height: 48
+            radius: 50%
+            bg_color: 0xFFFFFF
+            bg_opa: 0%
+            bg_image_src: button_right
+            bg_image_opa: 100%
+            widgets:
+              - label:
+                  align: CENTER
+                  text: ">"
+            on_click:
+              - lambda: |-
+                  int val = lv_slider_get_value(slider_id);
+                  val = int(val / 5)*5 + 5;
+                  if (val > 100) val = 100;
+                  ESP_LOGD("main", "Button pressed. Slider value is: %d", val);
+                  lv_slider_set_value(slider_id, val, LV_ANIM_ON);
+              - lvgl.label.update:
+                  id: label_slider
+                  text: 
+                    format: "Value: %d"
+                    args: [int(lv_slider_get_value(slider_id))]
+        - button:
+            id: slide_dec
+            x: 20
+            y: 180
+            width: 48
+            height: 48
+            radius: 50%
+            bg_color: 0xFFFFFF
+            bg_opa: 0%
+            bg_image_src: button_left
+            bg_image_opa: 100%
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "<"
+            on_click:
+              - lambda: |-
+                  int val = lv_slider_get_value(slider_id);
+                  val = int(val / 5)*5 - 5;
+                  if (val < 0) val = 0;
+                  ESP_LOGD("main", "Button pressed. Slider value is: %d", val);
+                  lv_slider_set_value(slider_id, val, LV_ANIM_ON);
+              - lvgl.label.update:
+                  id: label_slider
+                  text: 
+                    format: "Value: %d"
+                    args: [int(lv_slider_get_value(slider_id))]
