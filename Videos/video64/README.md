@@ -2,6 +2,8 @@
 
 20 November 2025
 
+- Update 19 December 2025 (see update below)
+
 # Scope
 
 This is video 64 on using the GC9A01 with integrated touchscreen connected to ESP32. In this video, we configure two example displays as a ESPHome device.  For this effort, one device is the popular ESP32-2424S012 Integrated Display and ESP32-C3 device from DIYMalls and the other is the popular Waveshare 1.28 Touch LCD that we connected to an ESP32-S3 chip. 
@@ -26,3 +28,12 @@ The YAML files for the two ESP32 devices.
 # Extra-information
 
 Found a schematic for the DIYmalls 1.28 Touch Display with ESP32-C3 (ESP32-2424S012).
+
+# Update - 2025-12-19
+
+The ESP32-C3 is low on RAM.  But using ESPHome home will allow you to incorporate bulky items like images. The roundc3.yaml was updated to include an image called Hello.png
+this file is 50x90 pixels.
+
+- When compiled, ESPHome reports that it is using:
+  - RAM 10%
+  - FLASH 69%
