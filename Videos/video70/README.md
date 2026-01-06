@@ -24,7 +24,7 @@ YAML
 fonts
  - materialdesignicons-webfont.ttf
 
- Note: On our Home Assistant we place the ttf file in the directory structure under esphome.  For example:  /config/esphome/fonts/xxxxx
+ Note: On our Home Assistant we placed the materialdesignicons-webfont.ttf file in the directory structure under esphome.  For example:  /config/esphome/fonts/xxxxx
 
 this file is found at https://pictogrammers.com/libraries/
 
