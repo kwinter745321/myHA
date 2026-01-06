@@ -13,11 +13,19 @@ In this video,
  - Walk through the YAML configuration
 
 The code for this video is available at the GitHub site:
-https://github.com/kwinter745321/myHA
-
-Repo:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video70
 
 
 # Files
 
+YAML
+ - esp32p486.yaml
+
+fonts
+ - materialdesignicons-webfont.ttf
+
+ Note: On our Home Assistant we place the ttf file in the directory structure under esphome.  For example:  /config/esphome/fonts/xxxxx
+
+this file is found at https://pictogrammers.com/libraries/
+
+A useful webpage is this:   https://pictogrammers.com/library/mdi/
