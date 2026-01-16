@@ -12,6 +12,9 @@ In this video,
  - We explain the wiring between the components
  - Walk through the YAML configuration
 
+The code for this video is available at the GitHub site:
+https://github.com/kwinter745321/myHA/tree/main/Videos/video72
+
 # Files
 
 esp32p486.yaml
