@@ -1,0 +1,725 @@
+
+# Home Assistant OS
+# Core
+# 2026.2.2
+# Supervisor
+# 2026.02.2
+# Operating System
+# 17.1
+# Frontend
+# 20260128.6
+# ESPHome Device Builder:
+# Current version: 2026.2.0
+# 19 February 2026
+
+esphome:
+  name: wstouch35c
+  friendly_name: wstouch35c
+  on_boot:
+    then:
+      # read the RTC time once when the system boots
+      pcf85063.read_time:
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  cpu_frequency: 240MHz
+  framework:
+    type: esp-idf
+    advanced:
+      disable_vfs_support_termios: false
+      disable_vfs_support_select: false
+      disable_vfs_support_dir: false
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret wstouch35c_api_key
+
+ota:
+  - platform: esphome
+    password: !secret wstouch35c_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 192.168.68.105
+  manual_ip: 
+    static_ip: 192.168.68.105
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret wstouch35c_ap_ssid
+    password: !secret wstouch35c_ap_password
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+
+captive_portal:
+
+####  Definitions #################
+globals:
+  - id: picked_sound
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+substitutions:
+  good1: chiching
+  good2: ding
+  good3: dododo
+  good4: woowah
+  bad1: ballmpa
+  bad2: bang
+  bad3: bleepbluup
+  bad4: carhorn
+#########################
+i2c:
+  - id: bus_a
+    sda: GPIO8
+    scl: GPIO7
+    scan: true
+
+pca9554:
+  - id: tca9554a_device
+    address: 0x20
+
+switch:
+  - platform: gpio
+    name: "Sound Enable"
+    pin:
+      pca9554: tca9554a_device
+      number: 7
+    restore_mode: RESTORE_DEFAULT_ON
+
+i2s_audio:
+  - id: i2s_audio_bus
+    i2s_mclk_pin: GPIO12
+    i2s_bclk_pin: GPIO13
+    i2s_lrclk_pin: GPIO15
+
+microphone:
+  - platform: i2s_audio
+    id: box_mic
+    sample_rate: 16000
+    i2s_din_pin: GPIO14
+    bits_per_sample: 16bit
+    adc_type: external
+
+audio_dac:
+  - platform: es8311
+    i2c_id: bus_a
+    id: es8311_dac
+    bits_per_sample: 16bit
+    sample_rate: 44100
+
+speaker:
+  - platform: i2s_audio
+    id: box_speaker
+    i2s_dout_pin: GPIO16
+    dac_type: external
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    num_channels: 1
+    audio_dac: es8311_dac
+    buffer_duration: 100ms
+
+media_player:
+  - platform: speaker
+    name: Mediaplayer
+    id: esp32_player
+    volume_initial: 0.80
+    announcement_pipeline:
+      speaker: box_speaker   
+      format: WAV
+      sample_rate: 16000
+      num_channels: 1
+    files:
+    - id: ${good1}
+      file: ${good1}.wav
+    - id: ${good2}
+      file: ${good2}.wav
+    - id: ${good3}
+      file: ${good3}.wav
+    - id: ${good4}
+      file: ${good4}.wav
+    - id: ${bad1}
+      file: ${bad1}.wav
+    - id: ${bad2}
+      file: ${bad2}.wav
+    - id: ${bad3}
+      file: ${bad3}.wav
+    - id: ${bad4}
+      file: ${bad4}.wav
+
+spi:
+  clk_pin: GPIO5
+  mosi_pin: GPIO1
+  miso_pin: GPIO2
+
+output:
+  - platform: ledc
+    id: backlight_output
+    pin: GPIO6
+
+light:
+  - platform: monochromatic
+    id: display_backlight
+    name: Screen Backlight Enable
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+
+time:
+  - platform: pcf85063
+    id: rtc_time
+    timezone: "America/New_York"
+    i2c_id: bus_a
+    update_interval: never
+  - platform: homeassistant
+    on_time_sync:
+      then:
+        # ... and update the RTC when the synchronization was successful
+        pcf85063.write_time:
+
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: GPIO0
+      ignore_strapping_warning: true
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Left Button"
+    id: left_button
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      - logger.log: "Button was pressed"
+    on_release:
+      - logger.log: "Button was released"
+
+sensor:
+  - platform: homeassistant
+    entity_id: media_player.esp32_player
+    attribute: volume_level
+    name: "Speaker Volume Level"
+    id: media_player_volume
+    on_value:
+      - lvgl.slider.update:
+          id: slider_id
+          value: !lambda "return x * 100.0;"
+
+touchscreen:
+  - platform: ft63x6
+    id: mytouchscreen
+    i2c_id: bus_a
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: true
+    on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - light.turn_on: display_backlight
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+
+display:
+  - platform: ili9xxx
+    id: my_display
+    model: ST7796
+    dc_pin: 
+      number: GPIO3
+      ignore_strapping_warning: true
+    reset_pin: 
+      pca9554: tca9554a_device
+      number: 1
+    dimensions:
+      width: 480
+      height: 320
+    transform:
+      swap_xy: true
+      mirror_x: false
+    color_order: BGR
+    invert_colors: true
+    auto_clear_enabled: false
+
+#### Scripts ################################################
+
+script:
+  - id: play_all
+    mode: queued
+    then:
+      - lvgl.label.update:
+          id: msg_stat
+          text: "Playing all"                            
+      - logger.log: "Playing each sound"
+      - delay: 0.5s
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${good1}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${good2}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${good3}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 1.2s
+
+      - media_player.speaker.play_on_device_media_file:
+            media_file: ${good4}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${bad1}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${bad2}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+
+      - media_player.speaker.play_on_device_media_file:
+          media_file: ${bad3}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+
+      - media_player.speaker.play_on_device_media_file:
+            media_file: ${bad4}
+      - wait_until:
+          media_player.is_idle: esp32_player
+      - delay: 0.7s
+      - lvgl.label.update:
+          id: msg_stat
+          text: ""    
+      - lambda: id(picked_sound) = 0;
+###################################
+  - id: play_sound
+    mode: queued
+    then:
+      - lvgl.label.update:
+          id: msg_stat
+          text: ""
+      - logger.log: 
+              format: "Playing sound: %d"
+              args:  ['id(picked_sound)']
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 1;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${good1}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 2;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${good2}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound)== 3;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${good3}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 4;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${good4}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 11;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${bad1}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 12;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${bad2}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound)== 13;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${bad3}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 14;'
+          then:
+            - media_player.speaker.play_on_device_media_file:
+                media_file: ${bad4}
+      - if:
+          condition:
+            lambda: 'return id(picked_sound) == 0;'
+          then:
+            - lvgl.label.update:
+                id: msg_stat
+                text: "Pick sound"
+      - lambda: id(picked_sound) = 0;
+
+#### Fonts ###############################################
+font:
+    #
+    #  Note:  This file must reside on the Home Assistant system in a folder within esphome
+    #         See our GitHub site.
+    #
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: mdi
+    size: 16
+    bpp: 4
+    glyphs: [
+      "\U000F075A", # music
+      "\U000F049F", # shuffle
+      "\U000F0335", # mdi-lightbulb
+      "\U000F0336", # mdi-lightbulb-outline
+      "\U000F0210", # mdi-fan
+      "\U000F081D", # mdi-fan-off
+      "\U000F05A9", # mdi-wifi
+      "\U000F0821", # mdi-floor-plan
+      "\U000F097E", # mdi-light-switch
+      ]
+
+#### User Interface (UI) ###############################################
+
+lvgl:
+  id: lvgl_component
+  buffer_size: 100%
+  byte_order: little_endian
+  touchscreens:
+    - touchscreen_id: mytouchscreen
+      long_press_time: 5000ms
+      long_press_repeat_time: 400ms
+  on_idle:
+  - timeout: 100s
+    then:
+      - light.turn_off: display_backlight
+      - lvgl.pause:
+  pages:
+    - id: main_page
+      bg_color: 0xFFFFFF
+      widgets:
+        - obj:
+            id: cont
+            x: 0
+            y: 0
+            width: 480
+            height: 320
+            bg_opa: TRANSP
+            border_color: 0x4B5563
+            border_width: 1
+            layout:
+              type: FLEX
+              flex_flow: COLUMN_WRAP
+              flex_align_cross: CENTER
+            widgets:
+              - obj:
+                  id: cont_list
+                  x: 0
+                  y: 0
+                  width: 210
+                  height: 300
+                  bg_opa: TRANSP
+                  border_color: 0x4B5563
+                  border_width: 1
+                  radius: 8
+                  layout:
+                    type: FLEX
+                    flex_flow: ROW_WRAP
+                    flex_align_cross: CENTER
+                  widgets:
+                    - label:
+                          id: label_announce
+                          width: 90%
+                          text_color: 0x0
+                          text_font: montserrat_24    
+                          text: "Sounds"
+                    - button:
+                        id: sound1
+                        width: 100%
+                        height: 40
+                        bg_color: 0xbfe3b4
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '1'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${good1}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${good1}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound2
+                        width: 100%
+                        height: 40
+                        bg_color: 0xbfe3b4
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '2'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${good2}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${good2}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound3
+                        width: 100%
+                        height: 40
+                        bg_color: 0xbfe3b4
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '3'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${good3}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${good3}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound4
+                        width: 100%
+                        height: 40
+                        bg_color: 0xbfe3b4
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '4'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${good4}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${good4}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound11
+                        width: 100%
+                        height: 40
+                        bg_color: 0xffb6c1
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '11'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${bad1}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${bad1}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound12
+                        width: 100%
+                        height: 40
+                        bg_color:  0xffb6c1
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '12'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${bad2}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${bad2}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound13
+                        width: 100%
+                        height: 40
+                        bg_color: 0xffb6c1
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '13'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${bad3}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${bad3}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+                    - button:
+                        id: sound14
+                        width: 100%
+                        height: 40
+                        bg_color:  0xffb6c1
+                        on_click:
+                          then:
+                            - globals.set:
+                                id: picked_sound
+                                value: '14'
+                            - lvgl.label.update:
+                                id: msg_stat
+                                text: ${bad4}
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001 ${bad4}"
+                              text_color: 0x0
+                              text_font: montserrat_20 
+              - obj:
+                  id: cont_controls
+                  x: 0
+                  y: 0
+                  width: 210
+                  height: 105
+                  bg_opa: TRANSP
+                  border_color: 0x4B5563
+                  border_width: 1
+                  layout:
+                    type: FLEX
+                    flex_flow: ROW_WRAP
+                    flex_align_cross: CENTER
+                  widgets:
+                    - label:
+                        id: label_buttons
+                        width: 90%
+                        text_color: 0x0
+                        text_font: montserrat_24    
+                        text: "Controls"
+                    - button:
+                        id: btn1
+                        width: 60
+                        height: 40
+                        on_click:
+                          then:
+                            - script.execute: play_sound
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF001"
+                              text_font: montserrat_20 
+                    - button:
+                        id: btn2
+                        width: 60
+                        height: 40
+                        on_click:
+                          then:
+                            - script.execute: play_all
+                        widgets:
+                          - label:
+                              align: center
+                              text: "\uF074"
+                              text_font: montserrat_20 
+              - obj:
+                  id: cont_message
+                  width: 210
+                  height: 85
+                  bg_opa: TRANSP
+                  border_color: 0x4B5563
+                  border_width: 1
+                  layout:
+                    type: FLEX
+                    flex_flow: ROW_WRAP
+                    flex_align_cross: CENTER
+                  widgets:
+                    - label:
+                        id: label_msg
+                        width: 90%
+                        text_color: 0x0
+                        text_font: montserrat_24    
+                        text: "Status"
+                    - label:
+                        id: msg_stat
+                        width: 90%
+                        text_color: 0x0
+                        text_font: montserrat_20    
+                        text: "Pick a sound"
+              - obj:
+                  id: cont_volume
+                  width: 210
+                  height: 80
+                  bg_opa: TRANSP
+                  border_color: 0x4B5563
+                  border_width: 1
+                  layout:
+                    type: FLEX
+                    flex_flow: ROW_WRAP
+                    flex_align_cross: CENTER
+                  widgets:
+                  - label:
+                      id: label_slider
+                      width: 100%
+                      text_color: 0x0
+                      text_font: montserrat_24   
+                      text: "Volume: 60"
+                  - slider:
+                      id: slider_id
+                      align: CENTER
+                      width: 80%
+                      min_value: 50
+                      max_value: 80
+                      knob:
+                        bg_color: 0x90EE90
+                      on_release:
+                        - speaker.volume_set:
+                              id: box_speaker
+                              volume: !lambda "return x/100;"
+                        - lvgl.label.update:
+                            id: label_slider
+                            text: 
+                              format: "Volume: %d"
+                              args: [int(x)]
