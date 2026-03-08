@@ -1,6 +1,8 @@
 # README.md - video 49 
 
 13 August 2025
+08 March 2026 - Add a Details page with README
+
 
 # Scope
 This is video 49 on Home Assistant and LVGL.  We learn about the default Weather information in Home Assistant.  This video provides an approach to configure an ESPHome device to fetch this data and display on a LVGL Display using LVGL.  The Test Rig uses Raspberry Pi Pico W USB board connected to an ILI9341 display.  This functionality is applicable to an ESP32-S3 USB board.
