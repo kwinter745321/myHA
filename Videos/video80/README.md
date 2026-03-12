@@ -10,7 +10,7 @@ You can fetch the firmware and programs from our GitHub site, and begin using th
 In this video, 
  - Demonstrate how to get weather data to ESPHome.
  - Demonstrate Home Assistant Developer Tools.
- - Explain why we need Hoime Assistant Helpers.
+ - Explain why we need Home Assistant Helpers.
  - Review the ESPHome Sensors and the LVGL screen implementation.
 
 The code for this video is available at the GitHub site:
