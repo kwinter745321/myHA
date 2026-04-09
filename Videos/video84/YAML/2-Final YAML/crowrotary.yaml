@@ -1,0 +1,423 @@
+#
+# crowrotary.yaml
+# Copyright (C) 2026 KW Services.
+# MIT License
+
+# Installation method Home Assistant OS
+# Core 2026.3.3
+# Supervisor 2026.03.3
+# Operating System 17.1
+# Frontend 20260312.0
+# ESPHome 2026.3.0
+# ESP32-S3
+#
+
+
+esphome:
+  name: crowrotary
+  friendly_name: crowrotary
+  platformio_options:                          
+    build_flags: "-DBOARD_HAS_PSRAM"           
+    board_build.esp-idf.memory_type: qio_opi    
+    board_build.flash_mode: dio                 
+  on_boot:
+    priority: 800                               # Boot priority (higher = earlier execution)
+    then:                                      
+      - logger.log: "Backlight ON"              
+      - output.turn_on: gpio_3_backlight_pwm    
+      - delay: 200ms
+      - output.turn_off: power_light
+      - output.turn_on: out1
+      - output.turn_on: out2
+
+
+#####################################################
+      # Brightness initialization logic
+      - delay: 500ms                                 # Longer delay for display initialization
+
+      # Initialize brightness and encoder (frozen state)
+      - lambda: |-
+          id(encoder_ready) = false;            // Disable encoder processing during init
+          id(brightness_value) = 50;            // Set initial brightness value to 50%
+          
+          // Force rotary_encoder internal state alignment
+          id(knob).publish_state(0);             // Reset rotary encoder internal counter to 0
+      
+      # Initial brightness (50%)
+      - light.turn_on:
+          id: back_light                             # Target backlight light component
+          brightness: 0.5                            # Set initial brightness to 50% (0.0-1.0 range)
+          
+      # # Initialize LVGL text on startup (display 50%)
+      - lambda: |-
+          char buf[10];                         // Character buffer for brightness text (10 chars max)
+          snprintf(buf, sizeof(buf), "%d%%", id(brightness_value)); // Format value as percentage string
+          lv_label_set_text(id(lbl_brightness), buf); // Update LVGL label with brightness value
+          lv_refr_now(NULL);                    // Force immediate LVGL display refresh
+      
+      # Wait to ensure publish_state takes effect
+      - delay: 200ms                                 # Delay to ensure encoder state reset completes
+      
+      # Enable encoder after initialization
+      - lambda: |-
+          id(encoder_ready) = true;             // Enable encoder processing after init complete
+
+######################################################################
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+    version: recommended                       # Use stable recommended ESP-IDF version
+
+psram:                                          # PSRAM (external RAM) configuration
+  mode: octal                                   # Use octal mode for PSRAM (8-bit)
+  speed: 80MHz                                  # Set PSRAM clock speed to 80MHz
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret crowrotary_api_key
+
+ota:
+  - platform: esphome
+    password: !secret crowrotary_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret crowrotary_ap_ssid
+    password: !secret crowrotary_ap_password
+  #use_address: 192.168.68.109
+  manual_ip: 
+    static_ip: 192.168.68.109
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+
+captive_portal:
+
+# Global variable definitions (persistent across device runtime)
+globals:
+  - id: brightness_value                             # Global ID for brightness value storage
+    type: int                                        # Data type: integer
+    restore_value: false                             # Don't restore value from flash on reboot
+    initial_value: "50"                              # Initial value: 50 (percent)
+
+  - id: encoder_ready                                # Global ID for encoder readiness flag
+    type: bool                                       # Data type: boolean (true/false)
+    restore_value: false                             # Don't restore value from flash on reboot
+    initial_value: "false"                           # Initial state: encoder disabled
+
+
+# ================= backlight controls =================
+
+
+output:                                         # Output component configuration
+  - platform: ledc                              # Use ESP32 LEDC (hardware PWM)
+    pin: 
+      number: 46                                 # GPIO pin for backlight PWM
+      ignore_strapping_warning: True
+    id: gpio_3_backlight_pwm                    # Unique ID for backlight output
+    frequency: 5000Hz                           # Set PWM frequency to 5000Hz (no flicker for LED)
+  - platform: gpio
+    id: power_light
+    pin: GPIO40
+  - platform: gpio
+    id: out1
+    pin: GPIO1
+  - platform: gpio
+    id: out2
+    pin: GPIO2
+
+
+# Light component wrapper for backlight control
+light:
+  - platform: monochromatic                          # Single-color light platform
+    name: "Backlight"                                # Name for Home Assistant integration
+    output: gpio_3_backlight_pwm                     # Link to PWM output component
+    id: back_light                                   # Unique ID for backlight light component
+    restore_mode: ALWAYS_ON                          # Always turn on backlight after reboot
+
+########################
+
+
+# Sensor components
+sensor:
+  # Rotary encoder for brightness adjustment
+  - platform: rotary_encoder                         # Rotary encoder sensor platform
+    id: knob                                         # Unique ID for encoder sensor
+    name: "Encoder"                                  # Name for Home Assistant integration
+    pin_a:                                           # Encoder A pin configuration
+      number: 45                                     # GPIO pin number for encoder A
+      ignore_strapping_warning: True
+      mode:
+        input: true                                  # Set pin as input
+        pullup: true                                 # Enable internal pullup resistor
+    pin_b:                                           # Encoder B pin configuration
+      number: 42                                     # GPIO pin number for encoder B
+      mode:
+        input: true                                  # Set pin as input
+        pullup: true                                 # Enable internal pullup resistor
+    resolution: 1                                    # Encoder resolution (steps per detent)
+    min_value: 0
+    max_value: 100
+    filters:
+      - debounce: 20ms                               # Debounce filter to reduce noise (20ms)
+      - lambda: return round(x);                     # Round encoder value to integer
+    on_value:
+      then:
+        - lambda: |-
+            if (!id(encoder_ready)) return;          // Ignore input if encoder not ready (init phase)
+
+            static bool first_run = true;            // Static flag for first encoder update
+            static int last_encoder = 50;             // Static storage for previous encoder value
+
+            int current = (int) id(knob).state;      // Get current encoder state as integer
+
+            if (first_run) {
+              last_encoder = current;                // Set initial baseline for encoder value
+              first_run = false;                     // Clear first run flag
+              return;                                // Skip processing on first run
+            }
+
+            int delta = current - last_encoder;      // Calculate change in encoder position
+            last_encoder = current;                  // Update last encoder value
+            if (delta == 0) return;                  // Skip if no actual movement detected
+
+            // Step adjustment (5% per encoder step)
+            if (delta < 0) {
+              id(brightness_value) -= 5;             // Decrease brightness by 5% for counter-clockwise
+            } else {
+              id(brightness_value) += 5;             // Increase brightness by 5% for clockwisea
+            }
+
+            // Clamp brightness range between 0-100%
+            if (id(brightness_value) < 0) id(brightness_value) = 0;
+            if (id(brightness_value) > 100) id(brightness_value) = 100;
+
+            // Write PWM directly (no queue, no delay)
+            float level = id(brightness_value) / 100.0f; // Convert percentage to 0.0-1.0 range
+            id(gpio_3_backlight_pwm).set_level(level);    // Set PWM output level immediately
+
+            lv_arc_set_value(id(arc_brightness), id(brightness_value)); // Sync brightness to LVGL arc component
+            // Update LVGL display (slower but non-blocking for brightness)
+            char buf[10];                               // Character buffer for display text
+            snprintf(buf, sizeof(buf), "%d%%", id(brightness_value)); // Format as percentage string
+            lv_label_set_text(id(lbl_brightness), buf);  // Update brightness label text
+            lv_refr_now(NULL);                          // Force immediate display refresh
+#### (4) Add actions for the meter #############################################################################
+        - lvgl.indicator.update: 
+            id: meter_needle
+            end_value: !lambda return id(brightness_value);
+        - lvgl.indicator.update: 
+            id: my_meter_arc
+            end_value: !lambda return id(brightness_value);
+        # - lvgl.arc.update:
+        #     id: arc_brightness
+        #     value: !lambda return id(brightness_value);
+#### (4) end ###################################################################################################
+
+# ================= SPI screen =================
+spi:                                            # SPI bus configuration
+  id: spi_bus                                   # Unique ID for SPI bus
+  mosi_pin: 11                                  # SPI MOSI (data out) pin
+  clk_pin: 10                                   # SPI clock pin
+
+display:                                        # Display component configuration
+  - platform: ili9xxx                           # Use ILI9XXX display driver
+    id: round_display                           # Unique ID for display
+    model: GC9A01A                              # Specific display model (1.28" round)
+    cs_pin: GPIO9                               # SPI chip select pin
+    dc_pin:                                     # Data/command selection pin
+      number: 3
+      ignore_strapping_warning: True
+    reset_pin: GPIO14                           # Display reset pin
+    data_rate: 80MHz
+    invert_colors: true                         # Invert display color polarity
+    show_test_card: false  # Do not show LVGL test card on boot
+    rotation: 0  # Display rotation angle (0 degrees, no rotation)
+    update_interval: 10ms  # Default display update interval (10ms)
+
+####  (1) Setup I2C Touchscreen and Knob Switch #####################################################
+
+i2c:
+  - id: i2c_touchscreen
+    sda: GPIO6
+    scl: GPIO7
+    scan: false
+
+  - id: i2c_sensor
+    sda: GPIO38
+    scl: GPIO39
+    scan: false
+
+touchscreen:
+  - platform: cst816
+    id: my_touchscreen
+    i2c_id: i2c_touchscreen
+    address: 21
+    interrupt_pin: GPIO5
+    reset_pin: GPIO13
+    skip_probe: true
+    on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - light.turn_on: back_light
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+
+time:
+  - platform: homeassistant
+    id: time_comp
+
+binary_sensor:
+  - platform: gpio
+    id: pushbutton
+    name: Pushbutton
+    pin:
+      number: 41
+      inverted: true    
+    on_release: 
+      then:
+        lvgl.page.show:
+          id: main_page                    
+####  (1) end ############################################################################################
+
+
+# ================= LVGL =================
+lvgl:                                         
+  displays:                      
+    - round_display
+  buffer_size: 50%                                   # Use 50% of available RAM for LVGL buffer
+
+####  (2) Add Touch to LVGL ###############################################################################  
+  touchscreens:
+    - my_touchscreen  
+  on_idle:
+  - timeout: 200s
+    then:
+      - lvgl.page.show: main_page
+      - light.turn_off: back_light
+      - lvgl.pause:
+  encoders:
+    sensor: knob
+    enter_button: pushbutton
+  color_depth: 16
+  bg_color: 0x000000
+  text_font: montserrat_20
+  align: center
+  pages:
+    - id: main_page
+
+##### (2)  end #############################################################################################
+      widgets:  # Define LVGL UI widgets (drawn in order: bottom → top)
+        # - image:  # Background image widget (bottom layer)
+        #     align: CENTER  # Align widget to screen center
+        #     id: img_bg  # Unique ID for background image widget
+        #     src: img_bg_light  # Link to preloaded background image
+        #     width: 240  # Image width (match screen resolution)
+        #     height: 240  # Image height (match screen resolution)
+        #     antialias: true  # Enable antialiasing (smooth image edges)
+        
+        # - label:  # Title label widget (Brightness, second layer)
+        #     align: CENTER  # Align widget to screen center
+        #     id: lbl_title  # Unique ID for title label
+        #     y: -40  # Y axis offset (40px up from center)
+        #     text_font: montserrat_12  # Use 12px Montserrat font
+        #     text: "Brightness"  # Label display text
+        #     text_color: 0xFFFFFF  # Text color (white, RRGGBB hex)
+        #     text_opa: "100%"  # Text opacity (100% fully visible)
+
+        - arc:  # Brightness arc widget (core UI, third layer)
+            align: CENTER  # Align widget to screen center
+            id: arc_brightness  # Unique ID for brightness arc (link to logic)
+            value: 50  # Initial arc value (match default brightness)
+            min_value: 0  # Arc minimum value (0% brightness)
+            max_value: 100  # Arc maximum value (100% brightness)
+            start_angle: 135  # Arc start angle (135 degrees)
+            end_angle: 45  # Arc end angle (45 degrees) → 270° arc (round screen fit)
+            #width: 160  # 160 Arc widget width (pixels)
+            #height: 160  # 160 Arc widget height (pixels)
+            width: 120 
+            height: 120 
+            
+            arc_color: 0x1A1A1A  # Arc background color (dark gray, RRGGBB)
+            arc_width: 12  # Arc background line width (pixels)
+            arc_rounded: true  # Rounded corners for arc background
+            
+            indicator:  # Arc progress indicator (current brightness)
+              arc_color: 0x00D2FF  # Indicator color (sky blue, RRGGBB)
+              arc_width: 12  # Indicator line width (pixels)
+              #arc_rounded: true  # Rounded corners for indicator
+              arc_rounded: false
+              
+            knob:  # Arc indicator knob (end of progress bar)
+              bg_color: 0xFFFFFF  # Knob background color (white)
+              bg_opa: "100%"  # Knob opacity (100% fully visible)
+              width: 20  # Knob width (pixels)
+              height: 20  # Knob height (pixels)
+              radius: 10  # Knob corner radius (10px = perfect circle)
+
+        - label:  # Brightness percentage label (top layer, most prominent)
+            x: 0
+            y: 20
+            align: CENTER  # Align widget to screen center
+            id: lbl_brightness  # Unique ID for brightness label (link to logic)
+            #text_font: montserrat_36  # Use 36px Montserrat font (large)
+            text_font: montserrat_20  
+            text: "50%"  # Initial display text (match default brightness)
+            text_color: 0xFFFFFF  # Text color (white, RRGGBB hex)
+            text_opa: "100%"  # Text opacity (100% fully visible)
+ #### (3) Meter #######################################################################           
+        - meter:
+            id: my_meter
+            height: 240
+            width: 240
+            align: center
+            bg_opa: TRANSP
+            text_color: 0xFFFFFF
+            scales:
+              range_from: 0
+              range_to: 100
+              angle_range: 270
+              rotation: 135
+              ticks:
+                  width: 2
+                  count: 21
+                  length: 5
+                  color: 0xffffff
+                  major:
+                    stride: 5
+                    width: 5
+                    length: 10
+                    color: 0xffffff
+                    label_gap: 20
+              indicators:
+                - arc:
+                    id: my_meter_arc
+                    color: 0x008000
+                    width: 15
+                    start_value: 0
+                    end_value: 50  # Initial value
+                - line:
+                    id: meter_needle
+                    width: 5
+                    color: 0xff0000
+                    r_mod: -4
+ #### (3) end #############################################################################################   
