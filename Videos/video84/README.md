@@ -21,10 +21,14 @@ https://github.com/kwinter745321/myHA/tree/main/Videos/video84
 
 # Files
 
+The 3D Print files were created on FreeCad 0.21.1.
+The inner radius of the stand is slick, so we added a piece of thick tape to help.
+
+
  - Print_3D
-   - standBottomXXXX.FCstd
+   - standBottomXXXX.FCstd  (FreeCad source)
    - standBottomXXXX.stl 
-   - standTopXXXX.FCstd
+   - standTopXXXX.FCstd  (FreeCad source)
    - standTopXXXX.stl
 
  - Starting Point - Lesson04
