@@ -1,0 +1,235 @@
+#
+# demopico2w.yaml
+# Copyright (C) 2026 KW Services.
+# MIT License
+
+# Installation method Home Assistant OS
+# Core 2026.5.4
+# Supervisor 2026.05.0
+# Operating System 17.3
+# Frontend 20260429.4
+# ESPHome 2026.5.0
+# Raspberry Pi Pico 2W (RP2350)
+#
+
+esphome:
+  name: demopico2w
+  friendly_name: demopico2w
+
+rp2040:
+  board: rpipico2w
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret demopico2w_api_key
+
+ota:
+  - platform: esphome
+    password: !secret demopico2w_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  #use_address: 192.168.68.114
+  manual_ip: 
+    static_ip: 192.168.68.114
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  # Enable fallback hotspot in case wifi connection fails
+  ap:
+    ssid: !secret demopico2w_ap_ssid
+    password: !secret demopico2w_ap_password
+
+# Enable web server
+web_server:
+  port: 80
+  # auth:
+  #   username: !secret central_ws_user
+  #   password: sp!secret central_ws_password
+
+captive_portal:
+
+################################################################
+
+
+####  Hardware
+
+output:
+  - platform: rp2040_pwm
+    id: backlight_output
+    pin: GPIO4
+
+light:
+  - platform: monochromatic
+    id: display_backlight
+    name: demopico2w Backlight
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+
+#### Display ################
+
+spi:
+  id: spi_bus
+  clk_pin: GPIO18
+  mosi_pin: GPIO19
+  miso_pin: GPIO16  
+
+display:
+  - platform: mipi_spi
+    model: ILI9341
+    id: my_display
+    spi_id: spi_bus
+    dc_pin: GPIO02
+    reset_pin: GPIO03
+    cs_pin: GPIO17
+    color_order: BGR
+    #invert_colors: true
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: xpt2046
+    id: my_touchscreen
+    cs_pin: GPIO21
+    calibration: 
+      x_min: 281
+      x_max: 3848
+      y_min: 347
+      y_max: 3878
+    display: my_display
+    transform:
+      mirror_x: true
+      mirror_y: true
+      swap_xy: false
+
+lvgl:
+  buffer_size: 25%
+  rotation: 90
+  displays:
+    my_display
+  touchscreens:
+    my_touchscreen
+##########################################################
+  theme:
+    id: my_theme
+    dark_mode: false
+    label:
+      text_font: montserrat_22
+      text_color: 0x0000ff
+    button:
+      bg_color: 0x0000ff
+  pages:
+    - id: main_page
+      widgets:
+        - obj:
+            id: container
+            align: CENTER
+            width: 95%
+            height: 95%
+            widgets:
+              - checkbox:
+                  id: checkbox1
+                  x: 10
+                  y: 0
+                  checkable: true
+                  text: "On"
+                  text_font: montserrat_22
+                  #width: 20
+                  #height: 20
+                  state:
+                    checked: true
+                  on_change:
+                    - lvgl.checkbox.update:
+                        id: checkbox1
+                        state:
+                          checked: true
+                    - lvgl.widget.update: {id: checkbox2, state: {checked: false}}
+              - checkbox:
+                  id: checkbox2
+                  x: 10
+                  y: 30
+                  checkable: true
+                  text: "Off"
+                  text_font: montserrat_22
+                  #width: 20
+                  #height: 20
+                  state:
+                    checked: false
+                  on_change:
+                    - lvgl.checkbox.update:
+                        id: checkbox2
+                        state:
+                          checked: true
+                    - lvgl.widget.update: {id: checkbox1, state: {checked: false}}
+              - button:
+                  id: my_button
+                  x: 0
+                  y: 50%
+                  width: 120
+                  height: 50
+                  checkable: false
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Blur Arc"
+                        text_color: 0xffffff
+                  shadow_width: 20
+                  shadow_spread: 2
+                  shadow_offset_x: 6
+                  shadow_offset_y: 12
+                  shadow_color: 0x808080
+                  shadow_opa: 60%
+                  on_press:
+                    - lvgl.arc.update:
+                        id: my_arc
+                        blur_radius: 25
+                        blur_backdrop: false
+                  on_release:
+                    - lvgl.arc.update:
+                        id: my_arc
+                        blur_radius: 0 
+              - arc:
+                  id: my_arc
+                  x: 140
+                  y: 0
+                  min_value: 0
+                  max_value: 8
+                  value: 4
+                  adjustable: true
+                  # Arc Angles (0 is at 3 o'clock, increasing clockwise)
+                  start_angle: 135
+                  end_angle: 45
+                  # Indicator Properties
+                  arc_width: 10
+                  arc_color: 0x4CAF50 # Green indicator
+                  arc_rounded: true
+                  widgets:
+                    - label:
+                        id: my_arc_value
+                        align: CENTER
+                        text: "4"
+                  on_value:
+                    then:
+                      - lvgl.label.update:
+                          id: my_arc_value
+                          text: 
+                            format: "%d"
+                            args: [int(x)]
+                      - lvgl.label.update:
+                          id: my_label
+                          drop_shadow_offset_x: !lambda return x;
+                          drop_shadow_offset_y: !lambda return x*2;
+              - label:
+                  id: my_label
+                  x: 140
+                  y: 120
+                  text: "hello"
+                  text_font: montserrat_42
+                  drop_shadow_offset_x: 4
+                  drop_shadow_offset_y: 8
+                  drop_shadow_color: 0x808080
+                  drop_shadow_opa: 50%    
