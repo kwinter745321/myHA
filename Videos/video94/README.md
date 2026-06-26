@@ -10,7 +10,7 @@ The Test Rig is an: ESP32-C6 (model: ESP32-C6-DevKitC-1) with ILI9341 Display. T
 In this video, 
  - Review the ESP32-C6 (Zigbee End Device) and a Sonoff Zigbee Dongle (Zigbee Coordinator).
  - Discuss the Test Rig and wiring.
- - Demonstrate a Zigbee Map (graphic in Home Assistant), How to add a device, and breifly look at the new ESPHome Device Builder.
+ - Demonstrate a Zigbee Map (graphic in Home Assistant), How to add a device, and briefly look at the new ESPHome Device Builder.
 
 The code for this video is available at the GitHub site:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video94
