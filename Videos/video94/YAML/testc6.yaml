@@ -1,0 +1,234 @@
+# Installation method: Home Assistant OS
+# Core: 2026.6.4
+# Supervisor: 2026.06.2
+# Operating System: 17.3
+# Frontend: 20260527.7
+# ESPHome Current version: 2026.6.2
+#
+# Board: Generic ESP32-C6 Board (Generic)
+# Definition: definitions/boards/generic-esp32c6/manifest.yaml
+
+esphome:
+  name: testc6
+  friendly_name: testc6
+          
+esp32:
+  variant: esp32c6
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+  # Currently there is a bug for DEBUG
+
+api:
+  encryption:
+    key: !secret testc6_api_key
+ota:
+  - platform: esphome
+    password: !secret testc6__ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  #use_address: 192.168.68.120
+  manual_ip: 
+    static_ip: 192.168.68.120
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  #ap:
+  #  ssid: !secret testc6_ap_ssid
+  #  password: !secret testc6_ap_password
+
+web_server:
+    
+#captive_portal:
+
+#### zigbee
+zigbee:
+  id: my_zigbee
+  router: false
+  model: testc6
+  power_source: MAINS_SINGLE_PHASE
+  on_join:
+    then:
+        - logger.log: 
+            format: "%s network"
+            args:
+              - '[x ? "Joined" : "Rejoined" ]'
+  
+####  Hardware
+
+output:
+    - platform: ledc
+      id: backlight_output
+      pin: 
+        number: GPIO2
+
+
+binary_sensor:
+  - platform: gpio
+    name: testc6 Button Pressed
+    pin:
+      number: GPIO10
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    id: binary_sensor_gpio_1
+    zigbee_binary_sensor: zigbee_pushbutton
+    on_state:
+      then:
+        - lvgl.switch.update: 
+            id: my_switch
+            state:
+              checked: !lambda return id(binary_sensor_gpio_1).state;
+
+light:
+  - platform: monochromatic
+    id: display_backlight
+    name: testc6 Backlight Enable
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+  
+spi:
+  id: spi_bus
+  type: single
+  clk_pin: GPIO19
+  miso_pin: GPIO20
+  mosi_pin: GPIO18
+
+display:
+  - platform: mipi_spi
+    model: ILI9341
+    dc_pin: GPIO17
+    reset_pin: GPIO16
+    cs_pin: GPIO21
+    invert_colors: false
+    id: display_ili9xxx_1
+
+touchscreen:
+  - platform: xpt2046
+    calibration:
+      x_max: 3848
+      x_min: 281
+      y_max: 3878
+      y_min: 347
+    id: touchscreen_xpt2046_1
+    cs_pin: GPIO23
+    transform:
+      mirror_x: true
+      mirror_y: true
+      swap_xy: false
+    spi_id: spi_bus
+    on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - light.turn_on: display_backlight
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+
+############################
+
+text_sensor:
+  - platform: template
+    name: "Device Name"
+    id: device_name
+    lambda: |-
+      return App.get_name().c_str();
+  - platform: wifi_info
+    ip_address:
+      name: "Device IP"
+      id: device_ip_address
+      on_value:
+        then:
+          - lvgl.label.update:
+              id: addr_label
+              text:
+                format: "IP: %s"
+                args: [ 'id(device_ip_address).state.c_str()' ]
+          - lvgl.label.update:
+              id: device_label
+              text:
+                format: "DEVICE: %s"
+                args: [ 'id(device_name).state.c_str()' ]
+##############################
+              
+lvgl:
+  buffer_size: 25%
+  rotation: 0
+  displays:
+    display_ili9xxx_1
+  touchscreens:
+    touchscreen_xpt2046_1
+  on_idle:
+    - timeout: 100s
+      then:
+        - light.turn_off: display_backlight
+        - lvgl.pause:
+  theme:
+    id: my_theme
+    dark_mode: true
+    label:
+      text_font: montserrat_22
+      text_color: 0xffffff
+    button:
+      bg_color: 0x0000ff
+  pages:
+    - id: main_page
+      widgets:
+        - obj:
+            align: CENTER
+            width: 100%
+            height: 100%
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              flex_align_main: SPACE_EVENLY
+              flex_align_cross: CENTER 
+            widgets:
+              - label:
+                  id: device_label
+                  height: 40px
+                  text: "Loading..."
+                  text_color: 0xffffff
+                  text_align: CENTER
+              - label:
+                  id: addr_label
+                  height: 40px
+                  text_color: 0xffffff
+                  text: "Waiting for IP..."
+                  text_align: CENTER
+              - slider:
+                  id: slider1
+                  height: 20px
+                  width: 90%
+                  min_value: 0
+                  max_value: 100
+                  value: 50
+                  on_value:
+                    - lvgl.label.update:
+                        id: lbl_slider1
+                        text:
+                          format: "%d"
+                          args: [int(x)]
+              - label:
+                  id: lbl_slider1
+                  height: 40px
+                  align_to:
+                    id: slider1
+                    align: OUT_TOP_MID
+                    x: 0
+                    y: -10
+                  text: "50"
+                  text_color: 0xffffff
+                  text_font: montserrat_24
+              - switch:
+                  id: my_switch
+                  width: 100px
+                  height: 30px
+                  checkable: true
+
