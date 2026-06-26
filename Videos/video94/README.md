@@ -3,9 +3,9 @@
 26 June 2026
 
 # Scope
-This is video 94 on a Home Assistant ESPHome/LVGL embedded solution. In this video, we experiment with the ESP32-C6's Zigbee capabilities.  We look at the Zigbee Map and how to Add a new Zigbee device.  We briefly look at and discuss the new ESPHome Device Builder available with the June Release.  We demonstrate a LVGL screen with widgets and an external button.   
+This is video 94 on a Home Assistant ESPHome embedded solution. In this video, we experiment with the ESP32-C6's Zigbee capabilities.  We look at the Zigbee Map and how to Add a new Zigbee device.  We briefly look at and discuss the new ESPHome Device Builder available with the June Release.  We demonstrate a LVGL screen with widgets and an external button.   
 
-The Test Rig is an: ESP32-C6 (model: ESP32-C6-DevKitC-1) with ILI9341 Display. The wiring is provided.  You can fetch the firmware and programs from our GitHub site, and begin using it immediately.  
+The Test Rig is an: ESP32-C6 (model: ESP32-C6-DevKitC-1) with ILI9341 Display. The wiring is provided.  You can fetch the YAML program from our GitHub site, and begin using it immediately.  
 
 In this video, 
  - Review the ESP32-C6 (Zigbee End Device) and a Sonoff Zigbee Dongle (Zigbee Coordinator).
