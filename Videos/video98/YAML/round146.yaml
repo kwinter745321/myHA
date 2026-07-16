@@ -56,7 +56,7 @@ logger:
 api:
   encryption:
     key: !secret round146_api
-    # key: "fbUIkoeyp6GYb2YHaaATYZ0OhEi2+BNFDzvZEF6TgrU="
+
 
 ota:
   - platform: esphome
