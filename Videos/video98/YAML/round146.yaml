@@ -1,0 +1,583 @@
+# Installation method: Home Assistant OS
+# Core: 2026.7.2
+# Supervisor: 2026.07.3
+# Operating System: 18.1
+# Frontend: 220260624.5
+# ESPHome Current version: 2026.7.0
+#
+
+
+# Board: Generic ESP32-S3 Board (Generic)
+# Definition: definitions/boards/generic-esp32s3/manifest.yaml
+
+esphome:
+  name: round146
+  friendly_name: round146
+  platformio_options:
+    board_build.flash_mode: dio
+  on_boot:
+    # We don't use touch for this demo, but this initialises it
+    # You can see touch updates in the log
+    - priority: -100
+      then:
+        - delay: 300ms
+        - lambda: |-
+            id(touch_glue).begin();
+            
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: recommended
+    components:
+      - name: espressif/esp_lcd_touch_spd2010
+        ref: 2.0.0
+      - name: espressif/esp_lcd_touch
+        ref: 1.2.1
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+      CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST: "y"
+      CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY: "y"
+      #CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      #CONFIG_MBEDTLS_SSL_PROTO_TLS1_3: "y"  # TLS1.3 support isn't enabled by default in IDF 5.1.5
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+
+api:
+  encryption:
+    key: !secret round146_api
+    # key: "fbUIkoeyp6GYb2YHaaATYZ0OhEi2+BNFDzvZEF6TgrU="
+
+ota:
+  - platform: esphome
+
+network:
+  enable_ipv6: false
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 192.168.68.122
+  manual_ip: 
+    static_ip: 192.168.68.122
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: !secret round146_ap_ssid
+    password: !secret round146_ap_pwd
+  post_connect_roaming: false
+
+web_server:
+    
+captive_portal:
+
+  
+# This fetches a long sequence of numbers and puts them into $INIT_SEQUENCE
+# which we use later on. This avoids having that long sequence of numbers in this
+# code file
+packages:
+  remote_package_shorthand: github://coofercat/waveshare-lcd-1.46-touch/init_sequence.yaml@main
+
+# This pulls in the spd2010_glue touch driver
+external_components:
+  - source: github://coofercat/waveshare-lcd-1.46-touch@main
+  - source: github://Djelibeybi/esphome-qmi8658@main
+    components: [qmi8658]
+
+
+time:
+    - platform: homeassistant
+      id: local_time
+      timezone: America/New_York
+
+#used to check free ram, cpu.
+debug:
+  update_interval: 90s
+
+i2s_audio:
+  - id: i2s_output
+    # i2s_output data pin is gpio10
+    i2s_lrclk_pin:
+      number: GPIO38
+    i2s_bclk_pin:
+      number: GPIO48
+
+  - id: i2s_input
+    # data line is GPIO15
+    i2s_lrclk_pin:
+      number: GPIO2
+    i2s_bclk_pin:
+      number: GPIO15
+
+microphone:
+  - platform: i2s_audio
+    id: i2s_microphone
+    i2s_audio_id: i2s_input
+    i2s_din_pin: GPIO39
+    adc_type: external
+    pdm: false
+    channel: right
+    sample_rate: 16000
+    bits_per_sample: 16bit
+
+speaker:
+  - platform: i2s_audio
+    id: i2s_audio_speaker
+    i2s_audio_id: i2s_output
+    i2s_dout_pin: GPIO47
+    dac_type: external
+    channel: stereo
+
+i2c:
+  sda: GPIO11
+  scl: GPIO10
+  scan: true
+    
+# Create the main QMI8658 component
+qmi8658:
+  id: imu_sensor # Required, can be any valid ID (e.g., imu, my_sensor)
+  address: 0x6B # Optional, 0x6B is default
+  update_interval: 100ms # Optional, 60s is default
+  # Range and ODR configuration (all optional)
+  accel_range: 4G # Options: 2G, 4G, 8G, 16G
+  gyro_range: 512DPS # Options: 16DPS, 32DPS, 64DPS, 128DPS, 256DPS, 512DPS, 1024DPS, 2048DPS
+  accel_odr: 500HZ # Options: 8000HZ, 4000HZ, 2000HZ, 1000HZ, 500HZ, 250HZ, 125HZ, 62.5HZ, 31.25HZ
+  gyro_odr: 500HZ # Options: 8000HZ, 4000HZ, 2000HZ, 1000HZ, 500HZ, 250HZ, 125HZ, 62.5HZ, 31.25HZ
+  #
+  # Fires once when motion is detected (leading edge only)
+  on_motion:
+    threshold: 0.5 # Optional, m/s² deviation from gravity (default: 0.5)
+    then:
+      - logger.log: "Motion detected!"
+
+  # Fires when device orientation changes
+  on_orientation_change:
+    then:
+      - logger.log:
+          format: "Orientation changed to: %s"
+          args: ['orientation.c_str()']
+      - lvgl.label.update: 
+          id: orient
+          text:
+            format: "%s"
+            args: ['orientation.c_str()']
+
+pca9554:
+  - id: 'pca9554a_device'
+    address: 0x20
+
+#################
+# QMI8658 device
+# https://github.com/Djelibeybi/esphome-qmi8658
+sensor:
+  - platform: qmi8658
+    qmi8658_id: imu_sensor # Reference to the component
+    # Accelerometer outputs (m/s²)
+    accel_x:
+      name: "Accelerometer X"                
+    accel_y:
+      name: "Accelerometer Y"
+    accel_z:
+      name: "Accelerometer Z"
+    # Gyroscope outputs (°/s)
+    gyro_x:
+      name: "Gyroscope X"
+    gyro_y:
+      name: "Gyroscope Y"
+    gyro_z:
+      name: "Gyroscope Z"
+    # Temperature (°C)
+    temperature:
+      name: "IMU Temperature"
+    # Tilt angles (degrees)
+    pitch:
+      name: "Pitch"
+      on_value:
+        then:
+          - lvgl.label.update: 
+              id: pitch_value
+              text:
+                format: "%.1f" 
+                args: [ 'x' ]   
+          - lvgl.arc.update:
+              id: arc_pitch
+              value: !lambda return int(x);
+    roll:
+      name: "Roll"
+      on_value:
+        then:
+          - lvgl.label.update: 
+              id: roll_value
+              text:
+                format: "%.1f" 
+                args: [ 'x' ]   
+          - lvgl.arc.update:
+              id: arc_roll
+              value: !lambda return int(x);
+              
+  #Reports the WiFi signal strength/RSSI in dB
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy # WiFi signal in %
+    source_id: wifi_signal_db
+    id: wifi_signal_pct
+    name: "WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+    device_class: ""
+
+# Binary sensor platform
+binary_sensor:
+  - platform: qmi8658
+    qmi8658_id: imu_sensor
+    motion:
+      name: "Motion Detected"
+      threshold: 0.5
+      filters:
+      - delayed_off: 5s
+      on_state:
+        then:
+          - lvgl.label.update:
+              id: lbl_motion
+              text: !lambda |-
+                if (x) {
+                  return "\uF021";
+                } else {
+                  return " ";
+                }    
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: lbl_time
+          text: !lambda |-
+            return id(local_time).now().strftime("%H:%M:%S");
+
+############################
+
+text_sensor:
+  - platform: template
+    name: "Device Name"
+    id: device_name
+    lambda: |-
+      return App.get_name().c_str();
+  - platform: wifi_info
+    ip_address:
+      name: "Device IP"
+      id: device_ip_address
+      on_value:
+        then:
+          - lvgl.label.update:
+              id: addr_label
+              text:
+                format: "IP: %s"
+                args: [ 'id(device_ip_address).state.c_str()' ]
+          - lvgl.label.update:
+              id: device_label
+              text:
+                format: "%s"
+                args: [ 'id(device_name).state.c_str()' ]
+          - lvgl.label.update:
+              id: device_label2
+              text:
+                format: "%s"
+                args: [ 'id(device_name).state.c_str()' ]
+                
+output:
+  - platform: ledc
+    pin: GPIO5
+    id: backlight
+
+light:
+  - platform: monochromatic
+    id: screen_backlight
+    output: backlight
+    name: "backlight Light" 
+    restore_mode: ALWAYS_ON
+
+spi:
+  id: display_qspi
+  type: quad
+  clk_pin: GPIO40
+  interface: spi2
+  data_pins:
+    - number: 46
+      ignore_strapping_warning: true
+    - number: 45
+      ignore_strapping_warning: true
+    - 42
+    - 41
+
+display:
+  - platform: qspi_dbi
+    model: CUSTOM
+    data_rate: 10MHz
+    id: main_display
+    spi_id: display_qspi
+    color_order: rgb
+    dimensions:
+      height: 412
+      width: 412     
+    cs_pin: GPIO21
+    reset_pin: 
+      pca9554: pca9554a_device
+      number: 1     
+    auto_clear_enabled: false #set to false for LVGL    
+    spi_mode: 0       
+    draw_rounding: 4 
+    #show_test_card: true  
+    init_sequence: $INIT_SEQUENCE
+
+############################
+
+# touch  is spd2010_glue below
+# https://github.com/coofercat/waveshare-lcd-1.46-touch/tree/main
+
+# This provides touch events. You can use on_swipe_left/on_swipe_right
+# and so on in lvgl to handle touch events.
+spd2010_glue:
+  id: touch_glue
+  width: 412
+  height: 412
+  int_gpio: 4       # plain integer; we handle GPIO internally
+  swap_xy: false
+  mirror_x: true
+  mirror_y: true
+
+
+##############################
+              
+lvgl:
+  buffer_size: 25%
+  rotation: 180
+  displays:
+    main_display
+  theme:
+    id: my_theme
+    dark_mode: true
+    label:
+      text_font: montserrat_22
+      text_color: 0xffffff
+    button:
+      bg_color: 0x0000ff
+  pages:
+    - id: page_main
+      bg_color: 0x000000
+      pad_all: 0
+      widgets:
+        - label:
+            id: device_label
+            x: 0
+            y: 10
+            width: 412
+            height: 40
+            text: "title"
+            text_color: 0xFFFFFF
+            text_align: CENTER
+            text_font: montserrat_24
+
+        - arc:
+            id: arc_pitch
+            x: 0
+            y: 60
+            width: 395
+            height: 335
+            value: 0
+            min_value: -90
+            max_value: 90
+            adjustable: true
+            start_angle: 0
+            end_angle: 180
+            rotation: 90
+            mode: NORMAL
+            arc_color: 0x404040
+            arc_width: 20
+            arc_opa: 100%
+            arc_rounded: false
+            indicator:
+              arc_color: 0x88F882
+              arc_width: 20
+              arc_opa: 100%
+              arc_rounded: false
+            knob:
+              bg_color: 0xFFFFFF
+              radius: 400
+              pad_all: 0
+              border_width: 2
+              border_color: 0x818CF8
+            bg_opa: 0%
+
+        - arc:
+            id: arc_roll
+            x: 40
+            y: 100
+            width: 250
+            height: 255
+            value: 0
+            min_value: -90
+            max_value: 90
+            adjustable: true
+            start_angle: 0
+            end_angle: 180
+            rotation: 90
+            mode: NORMAL
+            arc_color: 0x404040
+            arc_width: 20
+            arc_opa: 100%
+            arc_rounded: false
+            indicator:
+              arc_color: 0x88F882
+              arc_width: 20
+              arc_opa: 100%
+              arc_rounded: false
+            knob:
+              bg_color: 0xFFFFFF
+              radius: 400
+              pad_all: 0
+              border_width: 2
+              border_color: 0x818CF8
+            bg_opa: 0%
+
+        - label:
+            id: lbl_pitch
+            x: 170
+            y: 370
+            width: 80
+            height: 35
+            text: "Pitch:"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - label:
+            id: lbl_roll
+            x: 170
+            y: 325
+            width: 80
+            height: 35
+            text: "Roll:"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - label:
+            id: pitch_value
+            x: 255
+            y: 370
+            width: 65
+            height: 30
+            text: "pitch"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - label:
+            id: roll_value
+            x: 240
+            y: 325
+            width: 65
+            height: 30
+            text: "roll"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - label:
+            id: orient
+            x: 145
+            y: 150
+            width: 220
+            height: 35
+            text: "orientation"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - label:
+            id: lbl_motion
+            x: 100
+            y: 200
+            width: 170
+            height: 35
+            text: " "
+            text_color: 0xFF0000
+            text_font: montserrat_30
+            
+        - label:
+            id: lbl_time
+            x: 145
+            y: 180
+            width: 200
+            height: 60
+            text_color: 0xFFFF00
+            text_font: montserrat_46
+            
+        - button:
+            id: pm_next_btn
+            x: 145
+            y: 240
+            width: 180
+            height: 60
+            bg_color: 0x003366
+            text: "\uF054"
+            text_align: CENTER
+            text_color: 0xFFFFFF
+            on_press:
+              then:
+                lvgl.page.next:
+                  
+    - id: second_page
+      widgets:
+        - label:
+            text: "2nd page"
+            align: CENTER
+            text_align: CENTER
+            text_color: 0xFFFFFF
+        - label:
+            id: device_label2
+            x: 0
+            y: 10
+            width: 412
+            height: 40
+            text: "title"
+            text_color: 0xFFFFFF
+            text_align: CENTER
+            text_font: montserrat_24
+        - label:
+            id: addr_label
+            x: 0
+            y: 50
+            width: 412
+            height: 35
+            text: "192.168.0.100"
+            text_color: 0xFFFFFF
+            text_align: CENTER
+            text_font: montserrat_24
+        - button:
+            id: btn2_id
+            x: 173
+            y: 273
+            width: 180
+            height: 60
+            bg_color: 0x003366
+            text: "\uF054"
+            text_align: CENTER
+            text_color: 0xFFFFFF
+            on_press:
+              then:
+                lvgl.page.next:
+
+#############################################
