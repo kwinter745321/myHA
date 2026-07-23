@@ -7,16 +7,23 @@ This is video 99 on a Home Assistant ESPHome embedded solution utilizing Audio a
 
 The maker should be using the latest ESPHome Device Builder (at least the June Release 2026.06.1). The Test Rig is the device attached to an (optional) mount that we 3D printed in the last video. You can fetch the YAML and Automation files from our GitHub site, and begin using it immediately.  
 
-The
+It looks like a lot, but each section is easy to implement.
 
 In this video, 
-    • Demonstrate the built-in voice commands.
-    • Discuss the Test Rig and configuration.
-    • Review the Audio and Voice Assistant Setup.
-    • Review creation of Automations for custom Voice commands
-    • Demonstrate the custom Voice commands for the ESP32-S3 device.
-    • Demonstrate custom Voice commands for interactions between Home Assistant and device.
-    • Discuss the LVGL widgets.
+ - Demonstrate the built-in voice commands.
+ - Discuss the Test Rig and configuration.
+ - Review the Audio and Voice Assistant Setup.
+ - Review creation of Automations for custom Voice commands
+ - Demonstrate the custom Voice commands for the ESP32-S3 device.
+ - Demonstrate custom Voice commands for interactions between Home Assistant and device.
+ - Discuss the LVGL widgets.
+
+Timestamps for the major sections are:
+ - Test Rig:         03:30  
+ - Voice Assistant:  06:50
+ - App Installs:     10:40
+ - Automations:      16:00
+ - LVGL Graphics:    42:30
 
 The code for this video is available at the GitHub site:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video99
@@ -25,6 +32,7 @@ https://github.com/kwinter745321/myHA/tree/main/Videos/video99
 
 - YAML
 
+updated version of round146.yaml
 
 - Automations
 
