@@ -19,20 +19,20 @@ In this video,
  - Discuss the LVGL widgets.
 
 Timestamps for the major sections are:
- - Test Rig:         03:30  
- - Voice Assistant:  06:50
- - App Installs:     10:40
- - Automations:      16:00
- - LVGL Graphics:    42:30
+ - Test Rig:  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- 03:30  
+ - Voice Assistant: &nbsp;- 06:50
+ - App Installs: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- 10:40
+ - Automations:  &nbsp;&nbsp;&nbsp;&nbsp;- 16:00
+ - LVGL Graphics: &nbsp;&nbsp;- 42:30
 
-The code for this video is available at the GitHub site:
+The configuration files for this video are available at the GitHub site:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video99
 
 # Files
 
 - YAML
 
-updated version of round146.yaml
+round146.yaml (enhanced with Voice Assistant and we changed the LVGL widgets)
 
 - Automations
 

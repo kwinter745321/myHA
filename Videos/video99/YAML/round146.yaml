@@ -1,0 +1,732 @@
+# Installation method: Home Assistant OS
+# Core: 2026.7.3
+# Supervisor: 2026.07.3
+# Operating System: 18.1
+# Frontend: 220260624.6
+# ESPHome Current version: 2026.7.2
+#
+
+
+# Board: Generic ESP32-S3 Board (Generic)
+# Definition: definitions/boards/generic-esp32s3/manifest.yaml
+
+esphome:
+  name: round146
+  friendly_name: round146
+  platformio_options:
+    board_build.flash_mode: dio
+  on_boot:
+    # We don't use touch for this demo, but this initialises it
+    # You can see touch updates in the log
+    - priority: -100
+      then:
+        - delay: 300ms
+        - lambda: |-
+            id(touch_glue).begin();
+            
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: recommended
+    components:
+      - name: espressif/esp_lcd_touch_spd2010
+        ref: 2.0.0
+      - name: espressif/esp_lcd_touch
+        ref: 1.2.1
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+      CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST: "y"
+      CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY: "y"
+      #CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC: "y"
+      #CONFIG_MBEDTLS_SSL_PROTO_TLS1_3: "y"  # TLS1.3 support isn't enabled by default in IDF 5.1.5
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret round146_api
+
+ota:
+  - platform: esphome
+
+network:
+  enable_ipv6: false
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  #use_address: 192.168.68.122
+  manual_ip: 
+    static_ip: 192.168.68.122
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: !secret round146_ap_ssid
+    password: !secret round146_ap_pwd
+  post_connect_roaming: false
+
+web_server:
+    
+captive_portal:
+
+  
+# This fetches a long sequence of numbers and puts them into $INIT_SEQUENCE
+# which we use later on. This avoids having that long sequence of numbers in this
+# code file
+packages:
+  remote_package_shorthand: github://coofercat/waveshare-lcd-1.46-touch/init_sequence.yaml@main
+
+# This pulls in the spd2010_glue touch driver
+external_components:
+  - source: github://coofercat/waveshare-lcd-1.46-touch@main
+  - source: github://Djelibeybi/esphome-qmi8658@main
+    components: [qmi8658]
+
+
+time:
+    - platform: homeassistant
+      id: local_time
+      timezone: America/New_York
+
+#used to check free ram, cpu.
+debug:
+  update_interval: 90s
+
+#########################
+# Audio Setup
+#########################
+
+i2s_audio:
+  - id: i2s_output
+    # i2s_output data pin is gpio10
+    i2s_lrclk_pin:
+      number: GPIO38
+    i2s_bclk_pin:
+      number: GPIO48
+
+  - id: i2s_input
+    # data line is GPIO15
+    i2s_lrclk_pin:
+      number: GPIO2
+    i2s_bclk_pin:
+      number: GPIO15
+
+microphone:
+  - platform: i2s_audio
+    id: i2s_microphone
+    i2s_audio_id: i2s_input
+    i2s_din_pin: GPIO39
+    adc_type: external
+    pdm: false
+    channel: right
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    
+speaker:
+  - platform: i2s_audio
+    id: i2s_audio_speaker
+    i2s_audio_id: i2s_output
+    i2s_dout_pin: GPIO47
+    dac_type: external
+    channel: mono
+
+##############################
+# local Voice Assistant Setup
+#############################
+media_player:
+  - platform:  speaker
+    name: "Media Player"
+    id: my_player
+    volume_initial: 50%
+    volume_min: 10%
+    volume_max: 100%
+    volume_increment: 5%
+    announcement_pipeline:
+      speaker: i2s_audio_speaker
+      format: FLAC         # Audio format sent from Home Assistant (FLAC, MP3, OPUS, WAV, or NONE)
+      sample_rate: 48000    # Sample rate supported by your hardware
+      num_channels: 1       # 1 for mono, 2 for stereo
+    # on_announcement:
+    #   if:
+    #     condition:
+    #       - microphone.is_capturing:
+    #     then:
+    #       - micro_wake_word.stop
+    #       - wait_until: 
+    #           - not:
+    #               voice_assistant.is_running
+
+####### Note: See sensor for Media Player (volume) control below
+    
+micro_wake_word:
+  id: wake_word
+  models:
+    - model: okay_nabu
+      id: model_nabu
+    # - model: hey_jarvis
+    #   id: model_jarvis
+    # - model: github://esphome/micro-wake-word-models/models/v2/alexa.json
+    #   id: model_alexa
+  on_wake_word_detected:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+            
+voice_assistant:
+  microphone: i2s_microphone
+  micro_wake_word: wake_word
+  media_player:  my_player
+  noise_suppression_level: 0
+  auto_gain: 31dBFS
+  volume_multiplier: 3.5
+  # Screen hooks (update response + phases)
+  on_listening:
+    - logger.log: "VA: listening for command"
+    - lvgl.label.update: 
+          id: lbl_listen
+          text: "Listening"
+  on_idle:
+    - lvgl.label.update: 
+          id: lbl_listen
+          text: "Waiting"
+  on_stt_end:
+    - text_sensor.template.publish:
+        id: text_request
+        state: !lambda return x;
+    - micro_wake_word.start:   #if mww used
+  on_tts_start:
+    - text_sensor.template.publish:
+        id: text_response
+        state: !lambda return x;
+  on_error:
+    then:
+      - micro_wake_word.start: 
+      - lvgl.label.update: 
+            id: lbl_listen
+            text: "Error"
+      - wait_until: 
+          - not:
+              media_player.is_announcing:
+
+#####################################################
+# Parts of the Video98 IMU sensors are commented out
+####################################################
+
+i2c:
+  sda: GPIO11
+  scl: GPIO10
+  scan: true
+    
+# Create the main QMI8658 component
+qmi8658:
+  id: imu_sensor # Required, can be any valid ID (e.g., imu, my_sensor)
+  address: 0x6B # Optional, 0x6B is default
+  update_interval: 100ms # Optional, 60s is default
+  # Range and ODR configuration (all optional)
+  accel_range: 4G # Options: 2G, 4G, 8G, 16G
+  gyro_range: 512DPS # Options: 16DPS, 32DPS, 64DPS, 128DPS, 256DPS, 512DPS, 1024DPS, 2048DPS
+  accel_odr: 500HZ # Options: 8000HZ, 4000HZ, 2000HZ, 1000HZ, 500HZ, 250HZ, 125HZ, 62.5HZ, 31.25HZ
+  gyro_odr: 500HZ # Options: 8000HZ, 4000HZ, 2000HZ, 1000HZ, 500HZ, 250HZ, 125HZ, 62.5HZ, 31.25HZ
+  #
+  # Fires once when motion is detected (leading edge only)
+  on_motion:
+    threshold: 0.5 # Optional, m/s² deviation from gravity (default: 0.5)
+    then:
+      - logger.log: "Motion detected!"
+
+  # Fires when device orientation changes
+  on_orientation_change:
+    then:
+      - logger.log:
+          format: "Orientation changed to: %s"
+          args: ['orientation.c_str()']
+      # - lvgl.label.update: 
+      #     id: lbl_orient
+      #     text:
+      #       format: "%s"
+      #       args: ['orientation.c_str()']
+
+pca9554:
+  - id: 'pca9554a_device'
+    address: 0x20
+
+#################
+# QMI8658 device
+# https://github.com/Djelibeybi/esphome-qmi8658
+sensor:
+  - platform: qmi8658
+    qmi8658_id: imu_sensor # Reference to the component
+    # Accelerometer outputs (m/s²)
+    accel_x:
+      name: "Accelerometer X"                
+    accel_y:
+      name: "Accelerometer Y"
+    accel_z:
+      name: "Accelerometer Z"
+    # Gyroscope outputs (°/s)
+    gyro_x:
+      name: "Gyroscope X"
+    gyro_y:
+      name: "Gyroscope Y"
+    gyro_z:
+      name: "Gyroscope Z"
+    # Temperature (°C)
+    temperature:
+      name: "IMU Temperature"
+    # Tilt angles (degrees)
+    pitch:
+      name: "Pitch"
+      # on_value:
+      #   then:
+      #     - lvgl.label.update: 
+      #         id: pitch_value
+      #         text:
+      #           format: "%.1f" 
+      #           args: [ 'x' ]   
+      #     - lvgl.arc.update:
+      #         id: arc_pitch
+      #         value: !lambda return int(x);
+    roll:
+      name: "Roll"
+      # on_value:
+      #   then:
+      #     - lvgl.label.update: 
+      #         id: roll_value
+      #         text:
+      #           format: "%.1f" 
+      #           args: [ 'x' ]   
+      #     - lvgl.arc.update:
+      #         id: arc_roll
+      #         value: !lambda return int(x);
+              
+  #Reports the WiFi signal strength/RSSI in dB
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy # WiFi signal in %
+    source_id: wifi_signal_db
+    id: wifi_signal_pct
+    name: "WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+    device_class: ""
+    
+###################################
+# Sensor for Media Plyaer
+###################################
+  - platform: homeassistant
+    name: "Media Volume"
+    id: media_player_volume_sensor
+    entity_id: media_player.my_player
+    attribute: volume_level
+    on_value:
+      - logger.log:
+          level: INFO
+          format: "media_player.my_player: %f"
+          args: ['x']
+      - lvgl.slider.update:
+          id: media_volume_slider
+          value: !lambda "return x * 100.0;"
+
+
+# Binary sensor platform
+binary_sensor:
+  - platform: qmi8658
+    qmi8658_id: imu_sensor
+    motion:
+      name: "Motion Detected"
+      threshold: 0.5
+      filters:
+      - delayed_off: 5s
+      # on_state:
+      #   then:
+      #     - lvgl.label.update:
+      #         id: lbl_motion
+      #         text: !lambda |-
+      #           if (x) {
+      #             return "\uF021";
+      #           } else {
+      #             return " ";
+      #           }    
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: lbl_time
+          text: !lambda |-
+            return id(local_time).now().strftime("%H:%M:%S");
+
+############################
+
+text_sensor:
+  - platform: template
+    name: "Device Name"
+    id: device_name
+    lambda: |-
+      return App.get_name().c_str();
+  - platform: wifi_info
+    ip_address:
+      name: "Device IP"
+      id: device_ip_address
+      on_value:
+        then:
+          # - lvgl.label.update:
+          #     id: addr_label
+          #     text:
+          #       format: "IP: %s"
+          #       args: [ 'id(device_ip_address).state.c_str()' ]
+          - lvgl.label.update:
+              id: device_label
+              text:
+                format: "%s"
+                args: [ 'id(device_name).state.c_str()' ]
+          # - lvgl.label.update:
+          #     id: device_label2
+          #     text:
+          #       format: "%s"
+          #       args: [ 'id(device_name).state.c_str()' ]
+          
+###########################################
+# Text Sensor for Voice Assistant
+##########################################
+  - id: text_request
+    platform: template
+    on_value:
+      - lambda: |-
+          if(id(text_request).state.length()>32) {
+          std::string name = id(text_request).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_request).state = (truncated+"...").c_str();
+          }
+      - lvgl.label.update:
+          id: lbl_request
+          text:
+            format: "%s"
+            args: [ 'id(text_request).state.c_str()' ]
+
+  - id: text_response
+    platform: template
+    on_value:
+      - lambda: |-
+          if(id(text_response).state.length()>32) {
+          std::string name = id(text_response).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_response).state = (truncated+"...").c_str();
+          }
+      # - lvgl.label.update:
+      #     id: lbl_listen  #lbl_respond
+      #     text:
+      #       format: "%s"
+      #       args: [ 'id(text_request).state.c_str()' ]
+
+#############################################################
+#  Text object for Voice ToDo Custom Command and LVGL Widget
+############################################################
+
+text:
+  - platform: template
+    id: work_text
+    name: "Work Text"
+    mode: TEXT
+    restore_value: false
+    optimistic: true
+    # When HA sets a new value , update the LVGL label
+    on_value:
+      then:
+        - lvgl.label.update: 
+            id: work_label
+            text: !lambda |-
+              return id(work_text).state.c_str();
+
+############################################
+# Components for the ESP32-S3 Display
+############################################
+              
+output:
+  - platform: ledc
+    pin: GPIO5
+    id: backlight
+
+light:
+  - platform: monochromatic
+    id: screen_backlight
+    output: backlight
+    name: "backlight" 
+    restore_mode: ALWAYS_ON
+
+spi:
+  id: display_qspi
+  type: quad
+  clk_pin: GPIO40
+  interface: spi2
+  data_pins:
+    - number: 46
+      ignore_strapping_warning: true
+    - number: 45
+      ignore_strapping_warning: true
+    - 42
+    - 41
+
+display:
+  - platform: qspi_dbi
+    model: CUSTOM
+    data_rate: 10MHz
+    id: main_display
+    spi_id: display_qspi
+    color_order: rgb
+    dimensions:
+      height: 412
+      width: 412     
+    cs_pin: GPIO21
+    reset_pin: 
+      pca9554: pca9554a_device
+      number: 1     
+    auto_clear_enabled: false #set to false for LVGL    
+    spi_mode: 0       
+    draw_rounding: 4 
+    #show_test_card: true  
+    init_sequence: $INIT_SEQUENCE
+
+############################
+
+# touch  is spd2010_glue below
+# https://github.com/coofercat/waveshare-lcd-1.46-touch/tree/main
+
+# This provides touch events. You can use on_swipe_left/on_swipe_right
+# and so on in lvgl to handle touch events.
+spd2010_glue:
+  id: touch_glue
+  width: 412
+  height: 412
+  int_gpio: 4       # plain integer; we handle GPIO internally
+  swap_xy: false
+  mirror_x: true
+  mirror_y: true
+
+
+##############################
+# LVGL YAML for the Display
+##############################
+              
+lvgl:
+  buffer_size: 25%
+  rotation: 180
+  displays:
+    main_display
+  theme:
+    id: my_theme
+    dark_mode: true
+    label:
+      text_font: montserrat_22
+      text_color: 0xffffff
+    button:
+      bg_color: 0x0000ff
+  pages:
+    - id: page_main
+      on_swipe_left:
+        then:
+          - lvgl.label.update:
+              id: lbl_request
+              text: ""
+          # - lvgl.label.update:
+          #     id: lbl_respond
+          #     text: ""
+      bg_color: 0x000000
+      pad_all: 0
+      widgets:
+        - label:
+            id: device_label
+            x: 0
+            y: 10
+            width: 412
+            height: 40
+            text: "title"
+            text_color: 0x3498DB
+            text_align: CENTER
+            text_font: montserrat_24
+
+        - label:
+            id: lbl_time
+            x: 0
+            y: 40
+            width: 190
+            height: 55
+            align: TOP_MID
+            text_align: CENTER
+            text_color: 0xFFFF00
+            text_font: montserrat_40
+
+        - label:
+            id: work_label
+            x: 0
+            y: -20
+            width: 160
+            height: 170
+            align: CENTER
+            text: "---" 
+            text_font: montserrat_20
+            text_color: 0xffffff
+            max_width: 223
+            long_mode: SCROLL_CIRCULAR
+            bg_color: 0xc0c0c0
+            bg_opa: 50%
+            pad_all: 5
+            radius: 5
+            
+        - label:
+            id: lbl_request
+            x: 0
+            y: -50
+            width: 300
+            height: 70
+            align: BOTTOM_MID
+            text: "..."
+            text_color: 0xFFFFFF
+            text_align: CENTER
+            text_font: montserrat_24
+
+        - label:
+            id: lbl_listen
+            x: 0
+            y: -30
+            width: 300
+            height: 35
+            align: BOTTOM_MID
+            text: "Standby"
+            text_align: CENTER
+            text_color: 0xFFFFFF
+            text_font: montserrat_20
+
+        - label:
+            id: lbl_btn_listen
+            align_to: 
+              id: btn_wake
+              align: OUT_TOP_MID
+              x: 0
+              y: -10
+            width: 90
+            height: 35
+            text: "Listen:"
+            text_color: 0xFFFFFF
+            text_font: montserrat_24
+
+        - button:
+            id: btn_wake
+            x: 10
+            y: 220
+            width: 90
+            height: 70
+            bg_color: 0x003366
+            widgets:
+              - label:
+                  text: "\uF011"
+                  id: lbl_flag
+                  align: CENTER
+                  text_align: CENTER
+                  text_font: montserrat_36
+                  text_color: 0xD30000              
+            on_click:
+              - if:
+                  condition: micro_wake_word.is_running
+                  then:
+                    - micro_wake_word.stop:
+                    - voice_assistant.stop: 
+                    - lvgl.label.update: 
+                        id: lbl_flag
+                        text: "\uF011"
+                        text_color: 0xD30000
+                    - lvgl.label.update: 
+                        id: lbl_listen
+                        text: " "
+                  else:
+                    - micro_wake_word.start:
+                    - lvgl.label.update: 
+                        id: lbl_flag
+                        text: "\uF011"
+                        text_color: 0x3BB143      
+
+        - label:
+            id: lbl_slider_icon
+            height: 40px
+            align_to:
+              id: media_volume_slider
+              align: OUT_BOTTOM_MID
+              x: 0
+              y: 10
+            text: "\uF028"
+            text_color: 0xffffff
+            text_font: montserrat_28
+            
+        - label:
+            id: lbl_slider_value
+            height: 40px
+            align_to:
+              id: media_volume_slider
+              align: OUT_TOP_MID
+              x: -10
+              y: -10
+            text: "95"
+            text_color: 0xffffff
+            text_font: montserrat_24
+            
+        - slider:
+            id: media_volume_slider
+            x: -45
+            y: 0
+            width: 30
+            height: 150
+            align: RIGHT_MID
+            min_value: 0
+            max_value: 100
+            value: 95
+            #adv_hittest: true  # for accurate touch
+            bg_color: 0x2C3E50          # Dark background color
+            bg_opa: COVER
+            indicator:
+              bg_color: 0x3498DB          # Bright blue indicator color
+            knob:
+              bg_color: 0x00FF00
+            on_value:
+              - lvgl.label.update:
+                  id: lbl_slider_value
+                  text:
+                    format: "%d"
+                    args: [int(x)]
+            on_release:
+              - logger.log:
+                  level: INFO
+                  format: "esp32 slider: %f"
+                  args: ['x']
+              - speaker.volume_set:
+                  id: i2s_audio_speaker
+                  volume: !lambda "return x/100;"
+              - homeassistant.action:
+                  action: media_player.volume_set
+                  data:
+                    entity_id: media_player.my_player
+                  data_template:
+                    volume_level: !lambda return (x / 100.0);
+              # - homeassistant.action:
+              #     action: tts.speak
+              #     data:
+              #       media_player_entity_id: media_player.my_player
+              #       message: "Your volume has been updated."
+#############################################
