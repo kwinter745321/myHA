@@ -1,0 +1,16 @@
+alias: Mark_todo_item
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - Mark {item_name} in [my | the] list
+conditions: []
+actions:
+  - action: todo.update_item
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      status: completed
+      item: "{{trigger.slots.item_name}}"
+mode: single

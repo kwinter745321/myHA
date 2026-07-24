@@ -1,0 +1,12 @@
+alias: Next Sunset Time
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - when is sunset
+conditions: []
+actions:
+  - set_conversation_response: >-
+      The sun will set at {{ as_timestamp(state_attr('sun.sun', 'next_setting'))
+      | timestamp_custom('%I:%M %p') }}
+mode: single

@@ -1,0 +1,25 @@
+alias: Mark list
+description: ""
+triggers:
+  - trigger: conversation
+    command: Mark all items in [my] list
+conditions: []
+actions:
+  - action: todo.get_items
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      status: needs_action
+    response_variable: fetched
+  - repeat:
+      for_each: "{{ fetched['todo.work_list']['items'] }}"
+      sequence:
+        - action: todo.update_item
+          metadata: {}
+          target:
+            entity_id: todo.work_list
+          data:
+            item: "{{  repeat.item.uid  }}"
+            status: completed
+mode: single

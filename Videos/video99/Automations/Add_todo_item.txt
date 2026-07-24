@@ -1,0 +1,16 @@
+alias: Add_todo_item
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - add {item_name} to [my | the] [to-do] list
+conditions: []
+actions:
+  - action: todo.add_item
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      item: "{{trigger.slots.item_name}}"
+mode: single
+

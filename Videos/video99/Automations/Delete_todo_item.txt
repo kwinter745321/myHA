@@ -1,0 +1,15 @@
+alias: Delete_todo_item
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - "[remove | delete] {item_name} from [my | the] list"
+conditions: []
+actions:
+  - action: todo.remove_item
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      item: "{{trigger.slots.item_name}}"
+mode: single

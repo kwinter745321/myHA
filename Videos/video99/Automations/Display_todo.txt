@@ -1,0 +1,30 @@
+alias: Display_todo
+description: ""
+triggers:
+  - trigger: time_pattern
+    seconds: /15
+conditions: []
+actions:
+  - action: todo.get_items
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      status: needs_action
+    response_variable: Work_List_items
+  - action: text.set_value
+    metadata: {}
+    data:
+      value: >-
+        {% set items = Work_List_items['todo.work_list']['items'] |   
+        default([])   %}
+
+        {% if items | length > 0 %} {{ '\u2022 ' ~ (items |
+        map(attribute='summary')
+            | list | join('\n\u2022 ')) }}
+        {% else %}
+         Empty 
+        {% endif %}
+    target:
+      entity_id: text.round146_work_text
+mode: single

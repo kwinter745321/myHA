@@ -1,0 +1,14 @@
+alias: Finish_todo
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - finish  [my | the]  list
+conditions: []
+actions:
+  - action: todo.remove_completed_items
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data: {}
+mode: single
