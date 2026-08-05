@@ -1,0 +1,339 @@
+# Board: Generic ESP32 Board (Generic)
+# Definition: definitions/boards/generic-esp32/manifest.yaml
+
+# https://community.home-assistant.io/t/help-making-esp32-3248s035-work/748332/7
+# https://github.com/Bodmer/TFT_eSPI/issues/3323
+# https://community.home-assistant.io/t/help-making-esp32-3248s035-work/748332/16
+
+
+esphome:
+  name: gen35c
+  friendly_name: gen35c
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+logger: 
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret gen35_api  
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 192.168.68.123
+  manual_ip: 
+    static_ip: 192.168.68.123
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: !secret gen35_ap_ssid  
+    password: !secret gen35_ap_pwd 
+
+web_server:
+    
+captive_portal:
+  
+#########################################################
+i2c:
+  sda: 33
+  scl: 32
+  scan: true
+  id: bus_a
+
+spi:
+  clk_pin: 14
+  mosi_pin: 13
+  miso_pin: 
+    number: 12
+    ignore_strapping_warning: true
+
+light:
+  - platform: rgb
+    name: "Status Light"
+    id: status_light
+    red: red_GPIO
+    green: green_GPIO
+    blue: blue_GPIO
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Display Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
+
+output:
+  - platform: ledc
+    pin: 4
+    id: red_GPIO
+    inverted: True
+  - platform: ledc
+    pin: 16
+    id: green_GPIO
+    inverted: True
+  - platform: ledc
+    pin: 17
+    id: blue_GPIO
+    inverted: True
+  - platform: ledc
+    pin: 27
+    id: backlight_pwm
+
+sensor:
+  - platform: adc
+    pin: GPIO34
+    name: "Room Brightness"
+    update_interval: 60s
+    unit_of_measurement: "%"
+    device_class: "illuminance"
+
+#####################################################################
+display:
+  - platform: mipi_spi
+    id: my_display
+    model: ST7796
+    dc_pin: 
+      number: 2
+      ignore_strapping_warning: true
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dimensions: 320x480
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  platform: gt911
+  id: my_touch
+  update_interval: 50ms
+#  interrupt_pin: 21 # maybe not connected?
+#  reset_pin: 25 # From a openhasp config, appears to be the 'normal' esp32 reset pin?
+  on_touch: 
+    - light.turn_on: 
+        id: backlight
+        brightness: 100%
+  on_release:
+    then:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+
+#################################################################
+
+lvgl:
+  rotation: 90
+  touchscreens:
+    - my_touch
+  buffer_size: 25%
+  on_idle:
+    timeout: 600s
+    then:
+      - light.turn_off: backlight
+      - lvgl.pause:
+  theme:
+    label:
+      text_font: montserrat_24
+    button:
+      # bg_color: 0x7DE546
+      text_font: montserrat_24
+    # obj:
+    #   bg_color: 0x353d47
+    #   bg_opa: 30%
+    #   border_width: 0
+    #   border_color: 0x353d47
+    #   border_opa: 30%
+    #   radius: 8
+    #   opa: 100%
+    #   pad_all: 0
+  ###############################
+  pages:
+    - id: canvas_1
+      bg_color: 0x111827
+      pad_all: 0
+      widgets:
+        - obj:
+            id: lv_obj_1
+            x: 0
+            y: 10
+            width: 270
+            height: 45
+            align: TOP_MID
+            bg_color: 0x353D47
+            bg_opa: 30%
+            border_width: 1
+            border_color: 0x4B5563
+            radius: 8
+            shadow_width: 20
+            shadow_color: 0xFFFFFF
+            pad_all: 0
+            widgets:
+              - label:
+                  id: lv_label_1
+                  x: 0
+                  y: 0
+                  width: 95
+                  height: 30
+                  align: CENTER
+                  text: "Status"
+                  text_color: 0xFFFFFF
+                  text_align: CENTER
+                  text_font: montserrat_24
+
+        - obj:
+            id: lv_obj_2
+            x: 0
+            y: 0
+            width: 385
+            height: 135
+            align: CENTER
+            bg_color: 0x353D47
+            bg_opa: 30%
+            border_width: 1
+            border_color: 0x4B5563
+            radius: 8
+            shadow_width: 20
+            shadow_color: 0xFFFFFF
+            pad_all: 0
+            widgets:
+              - slider:
+                  id: lv_slider_2
+                  x: 140
+                  y: 15
+                  width: 200
+                  height: 20
+                  value: 50
+                  min_value: 0
+                  max_value: 100
+                  bg_color: 0x374151
+                  radius: 9999
+                  bg_opa: 100%
+                  knob:
+                    bg_color: 0xFFFFFF
+                    border_color: 0x4F46E5
+                    border_width: 2
+                  indicator:
+                    bg_color: 0xE54F46
+                    radius: 9999
+                  on_value:
+                    then:
+                      - lvgl.label.update: 
+                          id: lbl_slider1
+                          text:
+                            format: "%d"
+                            args: [int(x)]
+              - slider:
+                  id: lv_slider_3
+                  x: 140
+                  y: 96
+                  width: 200
+                  height: 20
+                  value: 50
+                  min_value: 0
+                  max_value: 100
+                  bg_color: 0x374151
+                  radius: 9999
+                  bg_opa: 100%
+                  knob:
+                    bg_color: 0xFFFFFF
+                    border_color: 0x4F46E5
+                    border_width: 2
+                  indicator:
+                    bg_color: 0x467FE5
+                    radius: 9999
+                  on_value:
+                    then:
+                      - lvgl.label.update: 
+                          id: lbl_slider2
+                          text:
+                            format: "%d"
+                            args: [int(x)]
+              - slider:
+                  id: lv_slider_4
+                  x: 140
+                  y: 57
+                  width: 200
+                  height: 20
+                  value: 50
+                  min_value: 0
+                  max_value: 100
+                  bg_color: 0x374151
+                  radius: 9999
+                  bg_opa: 100%
+                  knob:
+                    bg_color: 0xFFFFFF
+                    border_color: 0x4F46E5
+                    border_width: 2
+                  indicator:
+                    bg_color: 0x46E54F
+                    radius: 9999
+                  on_value:
+                    then:
+                      - lvgl.label.update: 
+                          id: lbl_slider3
+                          text:
+                            format: "%d"
+                            args: [int(x)]
+              - label:
+                  id: lbl_slider1
+                  x: 35
+                  y: 13
+                  width: 60
+                  height: 24
+                  text: "50"
+                  text_color: 0xFFFFFF
+              - label:
+                  id: lbl_slider2
+                  x: 35
+                  y: 57
+                  width: 60
+                  height: 24
+                  text: "50"
+                  text_color: 0xFFFFFF
+              - label:
+                  id: lbl_slider3
+                  x: 35
+                  y: 96
+                  width: 60
+                  height: 24
+                  text: "50"
+                  text_color: 0xFFFFFF
+
+        - obj:
+            id: lv_obj_3
+            x: 3
+            y: -20
+            width: 270
+            height: 60
+            align: BOTTOM_MID
+            bg_color: 0x353D47
+            bg_opa: 30%
+            border_width: 1
+            border_color: 0x4B5563
+            radius: 8
+            shadow_width: 20
+            shadow_color: 0xFFFFFF
+            pad_all: 0
+            widgets:
+              - button:
+                  id: lv_button_11
+                  x: 0
+                  y: 0
+                  width: 100
+                  height: 35
+                  align: CENTER
+                  bg_color: 0x2196F3
+                  text_color: 0x000000
+                  text_font: montserrat_24
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Set"
+                        text_color: 0x000000
