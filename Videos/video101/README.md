@@ -27,9 +27,16 @@ In this video,
 The code for this video is available at the GitHub site:
 https://github.com/kwinter745321/ESP32LVGL/tree/main/Videos/video101
 
+ESPHome LVGL Designer is owned and managed by Binary Link SRL (trading as ESPboards)
 
 # FIles
 
  - YAML
-   - Simple setup version with basic ESPHome configuration, device hardware and simple LVGL widgets
-   - Enhanced version
+   - gen35c-initial.yaml  - Simple setup version with basic ESPHome configuration, device hardware and simple LVGL widgets
+     - Look for the ########### followed by #lvgl:
+     - Copy (into copy/paste buffer) the line lvgl: until the end
+     - Open ESPHome LVGL Designer
+     - Paste the contents   (make sure to remove the # character in front of lvgl:)
+     - Click IMPORT button
+     - Now you can follow along with the video
+   - gen35c-final.yaml - Enhanced version

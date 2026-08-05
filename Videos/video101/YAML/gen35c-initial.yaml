@@ -1,3 +1,12 @@
+# Installation method: Home Assistant OS
+# Core: 2026.7.4
+# Supervisor: 2026.07.5
+# Operating System: 18.2
+# Frontend: 220260624.6
+# ESPHome Current version: 2026.7.3
+#
+
+
 # Board: Generic ESP32 Board (Generic)
 # Definition: definitions/boards/generic-esp32/manifest.yaml
 
@@ -173,6 +182,7 @@ lvgl:
     #   opa: 100%
     #   pad_all: 0
   ###############################
+  #lvgl:
   pages:
     - id: canvas_1
       bg_color: 0x111827
