@@ -74,7 +74,6 @@ script:
                     addr_start += 11;
                     size_t addr_end = raw_text.find("\"", addr_start);
                     mac_address = raw_text.substr(addr_start, addr_end - addr_start);
-                    std::replace(mac_address.begin(), mac_address.end(), '6', '4');
                 }
       
                 // 2. Extract RSSI
