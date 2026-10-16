@@ -30,3 +30,10 @@ https://github.com/kwinter745321/myHA/tree/main/Videos/video111
 My LCD Wizard account was upgraded to Pro in order to test and evaluate the service.
 
 # Files
+
+ - YAML
+   - myweather.yaml   - final form
+
+- Helper-Text
+   - help-screen-info.txt   - for colors and font glyphs
+   - help-code-info.txt     - for step 3
