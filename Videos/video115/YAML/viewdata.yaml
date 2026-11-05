@@ -1,0 +1,423 @@
+# Installation method: Home Assistant OS
+# Core: 2026.10.4
+# Supervisor: 2026.10.5
+# Operating System: 18.4
+# Frontend: 20260930.5
+# ESPHome: 2026.10.2
+
+# Board: Generic ESP32-S3 Board (Generic)
+# Definition: definitions/boards/generic-esp32s3/manifest.yaml
+
+esphome:
+  name: viewdata
+  friendly_name: ViewData
+  build_flags:
+       - -D LV_USE_CHART=1
+  includes:
+     - chart4.h
+  on_boot:
+    then:
+      - delay: 5sec
+      - lambda: |-
+            draw_chart(id(cont));
+       
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    advanced:
+      flash_chip: generic
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  level: INFO
+  logs:
+    homeassistant.sensor: ERROR # Changes level from WARN to ERROR
+
+api:
+  encryption:
+    key: !secret viewdata_api
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  #use_address: 192.168.68.129
+  manual_ip: 
+    static_ip: 192.168.68.129
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: !secret viewdata_ap_ssid   
+    password: !secret viewdata_ap_pwd  
+
+web_server:
+  
+captive_portal:
+  
+#### Hardware ##########################################################
+
+spi:
+  - id: spi_display
+    clk_pin: 12
+    mosi_pin: 11
+    miso_pin: 13
+
+i2c:
+  - id: i2c_touch
+    sda: 8
+    scl: 9
+    frequency: 400kHz
+    scan: true
+
+output:
+  - platform: ledc
+    id: backlight_output
+    pin: 15
+    frequency: 5000Hz
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: "ViewData Backlight"
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+    #internal: true
+
+#ble_version: 2.0.0
+esp32_ble_tracker:
+
+##########################################################
+
+# Global variables for LVGL
+globals:
+  -  id: vec_count
+     type: int
+     initial_value: '0'
+     
+  # Sensor 2 Vectors
+  -  id: live_atc2_temp
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc2_hum
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc2_blvl
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc2_bvolt
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+
+  # Sensor 3 Vectors
+  -  id: live_atc3_temp
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc3_hum
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc3_blvl
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+  -  id: live_atc3_bvolt
+     type: std::vector<float>
+     initial_value: 'std::vector<float>()'
+     
+sensor:
+  - platform: atc_mithermometer
+    id: atc_2
+    mac_address: "A4:C1:38:48:A6:7b"
+    temperature:
+      name: "ATC2 Temperature"
+      id: atc2_temp
+      unit_of_measurement: °F
+      filters: 
+        - lambda: return x * (9.0 / 5.0) + 32.0;
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc2_temp);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    humidity:
+      name: "ATC2 Humidity"
+      id: atc2_hum
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc2_hum);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    battery_level:
+      name: "ATC2 Battery-Level"
+      id: atc2_blvl
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc2_blvl);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    battery_voltage:
+      name: "ATC2 Battery-Voltage"
+      id: atc2_bvolt
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc2_bvolt);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+
+  - platform: atc_mithermometer
+    id: atc_3
+    mac_address: "A4:C1:38:9D:C1:01"
+    temperature:
+      name: "ATC3 Temperature"
+      id: atc3_temp
+      unit_of_measurement: °F
+      filters: 
+        - lambda: return x * (9.0 / 5.0) + 32.0;
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc3_temp);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    humidity:
+      name: "ATC3 Humidity"
+      id: atc3_hum
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc3_hum);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    battery_level:
+      name: "ATC3 Battery-Level"
+      id: atc3_blvl
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc3_blvl);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+              
+    battery_voltage:
+      name: "ATC3 Battery-Voltage"
+      id: atc3_bvolt
+      filters: 
+        - throttle_average: 1min
+      on_value:
+        then:
+          - lambda: |-
+              auto& vec = id(live_atc3_bvolt);
+              vec.push_back(x);
+              if (vec.size() > 10) vec.erase(vec.begin() );
+
+interval:
+  - interval: 60s
+    startup_delay: 10sec
+    then:
+      - lambda: |-
+              auto& vec = id(live_atc2_temp);
+              id(vec_count) = vec.size();
+      - lvgl.label.update: 
+          id: the_count
+          text:
+            format: "Count: %d"
+            args: [id(vec_count)]
+      #### Optional feature #######
+      - lvgl.widget.update:
+          id: btn_update
+          bg_color: !lambda |-
+            if (id(vec_count) > 0) {
+              return lv_color_hex(0x00FFFF); // Cyan if greater than zero
+            } else {
+              return lv_color_hex(0xFFFFFF); // white otherwise
+            }
+
+################################################################################
+    
+display:
+  - id: panel
+    platform: mipi_spi
+    model: ST7796
+    spi_id: spi_display
+    cs_pin: 10
+    dc_pin: 5
+    reset_pin: 4
+    dimensions:
+      width: 320
+      height: 480
+    color_order: bgr
+    invert_colors: true
+    data_rate: 40MHz
+    spi_mode: MODE0
+    auto_clear_enabled: false
+
+touchscreen:
+  - id: touch
+    platform: ft63x6
+    display: panel
+    i2c_id: i2c_touch
+    interrupt_pin: 6
+    reset_pin: 7
+    address: 0x38
+    transform:
+      swap_xy: false
+      mirror_y: false
+      mirror_x: false
+    # Temporary log setup to read raw coordinates
+    # on_touch:
+    #   - lambda: |-
+    #       ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%d", touch.x, touch.y, touch.x_raw, touch.y_raw);
+
+
+lvgl:
+  displays:
+    - panel
+  touchscreens: 
+    - touch
+  rotation: 90
+  default_font: montserrat_14
+  buffer_size: 25%
+  pages:
+    - id: page_main
+      bg_color: 0xc0c0c0
+      text_font: montserrat_20
+      widgets:
+        - label:
+            id: lbl_title
+            x: 15
+            y: 20
+            width: 100
+            height: 28
+            text: "Chart"
+            text_font: montserrat_28
+        - label:
+            id: the_count
+            x: 15
+            y: 280
+            text: ""
+            text_font: montserrat_10
+        - obj:
+            id: cont
+            x: 145
+            y: 20
+            width: 320
+            height: 280
+            bg_color: 0xffffff
+            border_width: 1
+        - dropdown:
+            id: dd_device
+            x: 15
+            y: 60
+            width: 120
+            height: 40
+            options:
+              - "atc_2"
+              - "atc_3"
+            dir: BOTTOM
+            selected_index: 0
+        - dropdown:
+            id: dd_property
+            x: 15
+            y: 110
+            width: 120
+            height: 40
+            options:
+              - "Temp"
+              - "Hum"
+              - "B.Lvl"
+              - "B.Volt"
+              - "ALL"
+            dir: BOTTOM
+            selected_index: 0
+        - button:
+            id: btn_draw
+            x: 15
+            y: 160
+            width: 100
+            height: 40
+            bg_color: 0x00FFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Clear"
+                  text_color: black
+            on_click:
+              - then:
+                  - script.execute: do_draw
+        - button:
+            id: btn_update
+            x: 15
+            y: 210
+            width: 100
+            height: 40
+            bg_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Draw"
+                  text_color: black
+            on_click:
+              - then:
+                  - script.execute: do_update
+
+script:
+  - id: do_draw
+    then:
+      - lambda: |-
+          draw_chart(id(cont));
+          
+  - id: do_update
+    then:
+      - lambda: |-
+          int dev = id(dd_device).get_selected_index();
+          int prop = id(dd_property).get_selected_index();
+          
+          // Define which vector to use based on property selection
+          // This maps the dropdown index to the correct global variable
+          std::vector<float>* target_vec = nullptr;
+          
+          if (prop == 0) target_vec = (dev == 0) ? &id(live_atc2_temp) : &id(live_atc3_temp);
+          else if (prop == 1) target_vec = (dev == 0) ? &id(live_atc2_hum) : &id(live_atc3_hum);
+          else if (prop == 2) target_vec = (dev == 0) ? &id(live_atc2_blvl) : &id(live_atc3_blvl);
+          else if (prop == 3) target_vec = (dev == 0) ? &id(live_atc2_bvolt) : &id(live_atc3_bvolt);
+          
+          // Handle the ALL case
+          if (prop == 4) {
+            if (dev == 0) update_chart_all(id(live_atc2_temp), id(live_atc2_hum), id(live_atc2_blvl), id(live_atc2_bvolt));
+            else update_chart_all(id(live_atc3_temp), id(live_atc3_hum), id(live_atc3_blvl), id(live_atc3_bvolt));
+            return;
+          }
+
+          // Default behavior for standard properties
+          if (target_vec != nullptr) {
+            update_chart(*target_vec);
+          }
+
+
+                          
