@@ -1,0 +1,1530 @@
+# Installation method: Home Assistant OS
+# Core: 2026.11.1
+# Supervisor: 2026.11.0
+# Operating System: 18.5
+# Frontend: 20261028.5
+# ESPHome: 2026.10.2
+
+# Created: 11 November 2026
+# KW Services
+# License: MIT
+
+# Board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (Waveshare)
+# Definition: definitions/boards/waveshare_esp32_s3_touch_amoled_2_16/manifest.yaml
+
+esphome:
+  name: mywatch
+  friendly_name: MyWatch
+  on_boot:
+    then:
+      - delay: 5sec
+        #### Pick a person(s) to receive a list notification
+        #########################################################
+      - switch.turn_on: 
+          id: switch_$name_1
+        ##########################################################
+      - script.execute: update_people_count
+        
+esp32:
+  variant: esp32s3
+  flash_size: 32MB
+  framework:
+    type: esp-idf
+    advanced:
+      enable_idf_experimental_features: true
+
+psram:
+  mode: octal
+  speed: 80MHz
+  
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret mywatch_api
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: !secret mywatch_ap_ssid
+    password: !secret  mywatch_ap_pwd
+  #use_address: 192.168.68.130
+  manual_ip: 
+    static_ip: 192.168.68.130
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+    
+web_server:
+  
+captive_portal:
+
+#### Substitutions
+############################################################
+
+substitutions:
+  #### Define your names of people to recive notifications
+  #########################################################
+  name_1: "Alice"
+  name_2: "Bob"
+  name_3: "Charlie"
+  name_4: "Diana"
+  ###########################################################
+globals:
+  - id: item_count
+    type: int
+    initial_value: '0'
+  - id: people_count
+    type: int
+    initial_value: '0'
+  - id: help_msg
+    type: std::string
+    initial_value: '"Press WAKE. Say: Okay Nabu. Wait for Listening. Ask: What time is it?"'
+
+
+#### Hardware definitions  
+############################################################
+
+spi:
+  - id: spi_display
+    type: quad
+    clk_pin: 11
+    data_pins:
+      - 4
+      - 5
+      - 6
+      - 7
+
+i2c:
+  - id: bus_i2c_gpio_15_14
+    sda: 15
+    scl: 14
+    frequency: 400kHz
+    scan: true
+
+display:
+  - id: panel
+    platform: mipi_spi
+    model: CO5300
+    bus_mode: quad
+    spi_id: spi_display
+    cs_pin: 12
+    reset_pin: 8
+    dimensions:
+      width: 410
+      height: 502
+      offset_width: 22
+      offset_height: 0
+      pad_width: 48
+      pad_height: 0
+    color_order: rgb
+    data_rate: 40MHz
+    auto_clear_enabled: false
+
+touchscreen:
+  - id: touch
+    platform: ft63x6
+    display: panel
+    i2c_id: bus_i2c_gpio_15_14
+    interrupt_pin: 38
+    reset_pin: 9
+    address: 0x38
+    on_touch: 
+    - light.turn_on: 
+        id: backlight
+        brightness: 100%
+    on_release:
+      then:
+        - if:
+            condition: lvgl.is_paused
+            then:
+              - lvgl.resume:
+              - lvgl.widget.redraw:
+                
+binary_sensor:
+  - platform: status
+    name: "Status"
+    id: my_status 
+    internal: false
+  - platform: gpio
+    id: dio_bootbutton
+    name: "BOOTButton"
+    pin:
+      number: 0
+      ignore_strapping_warning: true
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+  - platform: gpio
+    id: dio_pwrbutton
+    name: "PWRButton"
+    pin:
+      number: 10
+      mode:
+        input: true
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+
+  - platform: template
+    name: "Send Trigger"
+    id: send_trigger_sensor
+    lambda: |-
+      return false;
+    # Keeps the sensor 'on' for 1 second before resetting
+    filters:
+      - delayed_off: 1s 
+
+        
+output:
+  - platform: template
+    id: backlight_output
+    type: float
+    write_action:
+      - lambda: !lambda 'id(panel).set_brightness((uint8_t) lroundf(state * 255.0f));'
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: "MyWatch Backlight"
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+
+#### Minimal LVGL
+# lvgl:
+#   displays:
+#     - panel
+#   touchscreens:
+#     - touch
+#   default_font: montserrat_24
+#   buffer_size: 25%
+
+#########################################################################################################
+####  Middle section
+#########################################################################################################
+
+#### Audio definitions
+#####################################
+audio_adc:
+  - platform: es7210
+    id: es7210_adc
+    i2c_id: bus_i2c_gpio_15_14
+    address: 0x40 
+    bits_per_sample: 16bit
+    sample_rate: 16000
+    mic_gain: 30 
+
+i2s_audio:
+  - id: i2s_output  #spk  
+    i2s_bclk_pin: GPIO41
+    i2s_mclk_pin: GPIO16
+    i2s_lrclk_pin: 
+      number: GPIO45
+      ignore_strapping_warning: true 
+      
+microphone:
+  - platform: i2s_audio
+    id: es7210_mic
+    i2s_audio_id: i2s_output
+    sample_rate: 16000
+    i2s_din_pin: GPIO42
+    bits_per_sample: 16bit
+    adc_type: external
+
+audio_dac:
+  - platform: es8311
+    id: es8311_dac
+    i2c_id: bus_i2c_gpio_15_14
+    address: 0x18
+    bits_per_sample: 16bit
+    sample_rate: 48000
+
+speaker:
+  - platform: i2s_audio
+    id: speaker_id
+    i2s_audio_id: i2s_output
+    i2s_dout_pin: GPIO40
+    dac_type: external
+    sample_rate: 48000
+    bits_per_sample: 16bit
+    channel: left
+    audio_dac: es8311_dac
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input
+    
+micro_wake_word:
+  id: wake_word
+  models:
+    - model: okay_nabu
+      id: nodel_nabu
+    # - hey_jarvis
+    # - alexa
+  on_wake_word_detected:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+    
+media_player:
+  - platform: speaker
+    name: "MyWatch Media Player"
+    id: mywatch_media_player
+    volume_initial: 60%
+    volume_min: 10%
+    volume_max: 70%
+    volume_increment: 10%
+    media_pipeline:
+        speaker: media_spk_resampling_input
+        num_channels: 1
+    announcement_pipeline:
+      speaker: announcement_spk_resampling_input
+      format: FLAC
+      sample_rate: 48000
+      num_channels: 1
+    on_play:
+      then:
+        - micro_wake_word.stop: 
+        - delay: 200ms
+    # on_idle:
+    #   then:
+    #     - audio_dac.set_volume: !lambda 'return (float)lv_slider_get_value(id(ui_slider_spk)) / 100.0;'
+
+
+switch:
+  - platform: gpio
+    pin: 
+      number: GPIO46 # Use the pin connected to Mic VCC/Enable
+      ignore_strapping_warning: true
+    name: "Microphone Power"
+    id: mic_power_switch
+    restore_mode: ALWAYS_ON
+  - platform: template
+    id: wake_sound
+    name: Wake sound
+    icon: "mdi:bullhorn"
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "Recipient $name_1"
+    id: switch_$name_1
+    optimistic: true
+    on_turn_on:
+      - lvgl.widget.update:
+          id: ui_cb1
+          state:
+            checked: true
+      - script.execute: update_people_count
+    on_turn_off:
+      - lvgl.widget.update:
+          id: ui_cb1
+          state:
+            checked: false
+      - script.execute: update_people_count
+
+  - platform: template
+    name: "Recipient $name_2"
+    id: switch_$name_2
+    optimistic: true
+    on_turn_on:
+      - lvgl.widget.update:
+          id: ui_cb2
+          state:
+            checked: true
+      - script.execute: update_people_count
+    on_turn_off:
+      - lvgl.widget.update:
+          id: ui_cb2
+          state:
+            checked: false
+      - script.execute: update_people_count
+
+  - platform: template
+    name: "Recipient $name_3"
+    id: switch_$name_3
+    optimistic: true
+    on_turn_on:
+      - lvgl.widget.update:
+          id: ui_cb3
+          state:
+            checked: true
+      - script.execute: update_people_count
+    on_turn_off:
+      - lvgl.widget.update:
+          id: ui_cb3
+          state:
+            checked: false
+      - script.execute: update_people_count
+
+  - platform: template
+    name: "Recipient $name_4"
+    id: switch_$name_4
+    optimistic: true
+    on_turn_on:
+      - lvgl.widget.update:
+          id: ui_cb4
+          state:
+            checked: true
+      - script.execute: update_people_count
+    on_turn_off:
+      - lvgl.widget.update:
+          id: ui_cb4
+          state:
+            checked: false
+      - script.execute: update_people_count
+        
+#### Voice Assistant ########################################
+voice_assistant:
+  microphone: es7210_mic
+  media_player: mywatch_media_player
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 3.5
+  on_idle:
+    - lvgl.label.update: 
+          id: ui_lbl_listen
+          text: "Idle"
+    - lvgl.obj.update: 
+        id: ui_orb
+        bg_color: 0xC0C0C0
+        shadow_color: 0xC0C0C0
+  on_listening:
+    # - logger.log: "VA: listening for command"
+    - lvgl.label.update: 
+          id: ui_lbl_listen
+          text: "Listening"
+    - lvgl.animation.start: orb_pulse
+    - lvgl.obj.update: 
+        id: ui_orb
+        bg_color: 0x3B8143
+        shadow_color: 0x3B8143
+  on_stt_vad_start:
+    - lvgl.label.update: 
+        id: ui_lbl_listen
+        text: "Thinking"
+    - lvgl.obj.update: 
+        id: ui_orb
+        bg_color: 0xFFBD00
+        shadow_color: 0xFFBD00
+  on_stt_end:
+    - text_sensor.template.publish:
+        id: text_request
+        state: !lambda return x;
+    - lvgl.obj.update: 
+        id: ui_orb
+        bg_color: 0xFFBD00
+        shadow_color: 0xFFBD00
+    - lvgl.label.update: 
+        id: ui_lbl_listen
+        text: "Thinking"
+  on_tts_start:
+    - text_sensor.template.publish:
+        id: text_response
+        state: !lambda return x;
+    - lvgl.obj.update: 
+        id: ui_orb
+        bg_color: 0xFF0000
+        shadow_color: 0xFF0000
+    - lvgl.label.update: 
+        id: ui_lbl_listen
+        text: "Reply"
+  on_tts_end:
+    then:
+      - delay: 1s
+      - lvgl.animation.stop: orb_pulse
+  on_end:
+    # Wait until announcement playback has finished
+    - delay: 2s
+    - wait_until:
+        condition:
+          - and:
+              - not:
+                  media_player.is_announcing:
+              - not:
+                  speaker.is_playing:
+                    id: speaker_id
+        timeout: 15s
+    # Restart wake word only if it is not already running
+    - if:
+        condition:
+          - not:
+              micro_wake_word.is_running
+        then:
+          - lvgl.label.update: 
+              id: ui_lbl_listen
+              text: "Idle"
+          - lvgl.obj.update: 
+              id: ui_orb
+              bg_color: 0xC0C0C0
+              shadow_color: 0xADADAD
+          - lvgl.label.update: 
+              id: ui_lbl_flag
+              text: "\uF011"
+              text_color: 0xD30000
+          - lvgl.label.update: 
+              id: ui_lbl_request
+              text: !lambda |-
+                      return id(text_response).state.c_str();
+  on_error:
+    then:
+      - lvgl.label.update: 
+            id: ui_lbl_listen
+            text: "Error"
+      - wait_until: 
+          - not:
+              media_player.is_announcing:
+
+################################################################
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: ui_lbl_time
+          text:
+            time_format: "%H:%M:%S"
+            time: homeassistant_time
+    
+number:
+  - platform: template
+    name: "Speaker Volume Control"
+    id: speaker_volume_control
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 1
+    initial_value: 60
+    on_value:
+      then:
+        # This action handles the conversion from 0-100 (slider) to 0.0-1.0 (media player)
+        - media_player.volume_set:
+            id: mywatch_media_player
+            volume: !lambda 'return x / 100.0;'
+
+  - platform: template
+    name: "Mic Gain Control"
+    id: mic_gain_control
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 1
+    initial_value: 60
+
+######################################################################################
+#### https://github.com/cptkirki/AXP2101_WS-AMOLED-1.75
+####
+#### Used to interface to the AXP2101 power management chip to learn the battery level
+######################################################################################
+external_components:
+  - source:
+      type: git
+      url: https://github.com/cptkirki/AXP2101_WS-AMOLED-1.75
+      ref: v1.0.0
+    components: [axp2101]
+
+axp2101:
+  id: axp2101_component
+  model: WS-S3AMOLED175
+  address: 0x34
+  i2c_id: bus_i2c_gpio_15_14
+  update_interval: 60s
+    
+sensor:
+  - platform: axp2101
+    # battery_voltage:
+    #   name: "Battery Voltage"
+    #   unit_of_measurement: "v"
+    battery_level:
+      name: "Battery Level"
+      id: battery_level
+      unit_of_measurement: "%"
+      on_value:
+        then:
+          - lvgl.label.update: 
+              id: ui_lbl_battery
+              text:
+                format: "Battery: %3.0f%%"
+                args: [ 'id(battery_level).state']
+    battery_charging:
+      name: "Battery Charging"
+##########################################################################################
+    
+
+###########################################
+# Text Sensors for Voice Assistant
+##########################################
+text_sensor:
+  - id: text_request
+    platform: template
+    on_value:
+      - lambda: |-
+          if(id(text_request).state.length()>32) {
+          std::string name = id(text_request).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_request).state = (truncated+"...").c_str();
+          }
+      - lvgl.label.update:
+          id: ui_lbl_request
+          text:
+            format: "%s"
+            args: [ 'id(text_request).state.c_str()' ]
+
+  - id: text_response
+    platform: template
+    on_value:
+      - lambda: |-
+          if(id(text_response).state.length()>32) {
+          std::string name = id(text_response).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_response).state = (truncated+"...").c_str();
+          }
+
+#############################################################
+#  Text object for Voice ToDo Custom Command and LVGL Widget
+############################################################
+text:
+  - platform: template
+    id: work_text
+    name: "Work Text"
+    mode: TEXT
+    restore_value: false
+    initial_value: ""
+    optimistic: true
+    # When HA sets a new value , update the LVGL label
+    on_value:
+      then:
+        - lvgl.label.update: 
+            id: ui_work_label
+            text: !lambda |-
+              return id(work_text).state.c_str();
+        - lambda: |-
+            std::string text_str = id(work_text).state;
+            int lines = 1;
+            if (text_str.empty() ) {
+                lines = 0;
+            } else {
+                for (char c : text_str) {
+                  if (c == '\n') lines++;
+                }
+            }
+            id(item_count) = lines;   //update the global
+        - lvgl.label.update:
+            id: ui_lbl_list
+            text:
+              format: "items: %d"
+              args: [ 'id(item_count)']
+
+#### SCRIPTS ############################################################
+#########################################################################
+script:
+  ####  Media Player Volume Update
+  ####################################
+  - id: lw_ui_slider_spk_drives
+    then:
+      - media_player.volume_set: 
+          id: mywatch_media_player
+          volume: !lambda 'return (float)lv_slider_get_value(id(ui_slider_spk)) / 100.0;'
+      #### Only update the slider's label when the slider's value changes
+      ###################################################################
+      - if:
+          condition:
+            lambda: !lambda |-
+              char buf[50];
+              snprintf(buf, sizeof(buf), "%d", (int)(lv_slider_get_value(id(ui_slider_spk))));
+              return std::string(buf) != lv_label_get_text(id(ui_lbl_value));
+          then:
+            - lvgl.label.update:
+                id: ui_lbl_value
+                text: !lambda |-
+                  char buf[50];
+                  snprintf(buf, sizeof(buf), "%d", (int)(lv_slider_get_value(id(ui_slider_spk))));
+                  return std::string(buf);
+
+
+    #### WAKE Button press action
+    ##############################################
+  - id: enable_wake
+    then:
+      #### User did not wait for assistant.
+      - if:
+          condition: micro_wake_word.is_running
+          then:
+            - micro_wake_word.stop:
+            - voice_assistant.stop: 
+            - lvgl.label.update: 
+                id: ui_lbl_flag
+                text: "\uF011"
+                text_color: 0xD30000
+            - lvgl.animation.stop: orb_pulse
+            - lvgl.obj.update: 
+                id: ui_orb
+                bg_color: 0x000000
+                shadow_color: 0xADADAD
+            - lvgl.label.update: 
+                id: ui_lbl_listen
+                text: "Error"
+          #### Used pressed WAKE button and device begins to listen
+          #############################################################
+          else:
+            - micro_wake_word.start:
+            - lvgl.label.update: 
+                id: ui_lbl_flag
+                text: "\uF011"
+                text_color: 0x3BB143 
+
+     #### User pressed SEND.  Sets trigger for Automation to perform notice
+     #######################################################################
+  - id: send_notice
+    then:
+      - binary_sensor.template.publish:
+          id: send_trigger_sensor
+          state: true
+
+    #### Count people with checked boxes
+    ########################################
+  - id: update_people_count
+    then:
+      - lambda: |-
+          int count = 0;
+          // Check the state of each checkbox
+          if (lv_obj_has_state(id(ui_cb1), LV_STATE_CHECKED)) count++;
+          if (lv_obj_has_state(id(ui_cb2), LV_STATE_CHECKED)) count++;
+          if (lv_obj_has_state(id(ui_cb3), LV_STATE_CHECKED)) count++;
+          if (lv_obj_has_state(id(ui_cb4), LV_STATE_CHECKED)) count++;
+          
+          // Update the global variable
+          id(people_count) = count;
+      - lvgl.label.update:
+          id: ui_lbl_people
+          text:
+            format: "Count: %d"
+            args: [id(people_count)]
+            
+    #### Set all people to checked (future feature)
+    ###############################################
+  - id: select_all_people
+    then:
+      - switch.toggle: switch_$name_1
+      - switch.toggle: switch_$name_2
+      - switch.toggle: switch_$name_3
+      - switch.toggle: switch_$name_4
+      - script.execute: update_people_count
+
+
+#########################################################################################################
+#########################################################################################################
+
+lvgl:
+  displays:
+    - panel
+  touchscreens:
+    - touch
+  default_font: montserrat_24
+  buffer_size: 25%
+  on_idle:
+    timeout: 600s
+    then:
+      - light.turn_off: backlight
+      - lvgl.pause:
+  top_layer: 
+    widgets:
+      - obj:
+          id: ui_status_bar
+          width: 100%
+          height: 30
+          bg_opa: 39%
+          bg_color: 0x000000
+          border_width: 0
+          pad_all: 2
+          widgets:
+            - label:
+                id: ui_lbl_battery
+                text: "Battery: ---%%"
+                x: 70
+                y: 5
+                text_color: 0x39FF14
+                text_font: montserrat_18
+            - label:
+                id: ui_lbl_time # Optional: you can add time here too
+                text: "12:00:00"
+                x: 270
+                y: 5
+                text_color: 0x39FF14
+                text_font: montserrat_18      
+##############################################################
+  pages:
+    - id: ui_screen1
+      bg_color: 0x000000
+      text_color: 0xFFFFFF
+      outline_color: 0x000000
+      outline_width: 2
+      border_color: 0x000000
+      border_width: 4
+      widgets:
+        - obj:
+            id: ui_cont_top
+            width: 100%
+            height: 100%
+            layout:
+              type: FLEX
+              flex_flow: ROW_WRAP
+              flex_align_main: CENTER
+              flex_align_cross: CENTER
+              flex_align_track: CENTER
+            bg_opa: 20%
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            bg_color: 0x000000
+            bg_grad_dir: VER
+            border_width: 0
+            widgets:
+              - button:
+                  id: ui_btn_grocery
+                  width: 140
+                  height: 140
+                  x: 278
+                  y: 181
+                  bg_image_src: img_streamline_ultimate_color_fruit_watermelon_140x140
+                  bg_opa: 0%
+                  outline_opa: 100%
+                  outline_color: 0x000000
+                  outline_width: 2
+                  border_color: 0x000000
+                  border_width: 4
+                  widgets:
+                    - label:
+                        id: ui_btn_grocery_text
+                        align: CENTER
+                        text: ""
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_todo_grocery
+              - button:
+                  id: ui_btn_list
+                  width: 140
+                  height: 140
+                  y: 40
+                  bg_image_src: img_streamline_ultimate_color_task_list_to_do_140x140
+                  bg_opa: 0%
+                  outline_opa: 100%
+                  border_color: 0x000000
+                  border_width: 4
+                  outline_color: 0x000000
+                  outline_width: 2
+                  widgets:
+                    - label:
+                        id: ui_btn_list_text
+                        align: CENTER
+                        text: ""
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_grocery_list
+              - label:
+                  id: ui_lbl_grocery
+                  long_mode: WRAP
+                  text: "Grocery"
+                  width: 40%
+                  height: 30
+                  x: 40
+                  y: 373
+                  text_color: 0x39FF14
+                  text_font: montserrat_24
+                  text_align: CENTER
+              - label:
+                  id: ui_lbl_list
+                  long_mode: WRAP
+                  text: "items: 0"
+                  width: 40%
+                  height: 30
+                  x: 250
+                  y: 336
+                  text_color: 0x39FF14
+                  text_font: montserrat_24
+                  text_align: CENTER
+              - button:
+                  id: ui_btn_send
+                  width: 140
+                  height: 140
+                  x: 10
+                  y: 50
+                  bg_image_src: img_streamline_ultimate_color_phone_type_140x140
+                  bg_opa: 0%
+                  outline_opa: 100%
+                  border_color: 0x000000
+                  border_width: 4
+                  outline_color: 0x000000
+                  outline_width: 2
+                  widgets:
+                    - label:
+                        id: ui_btn_send_text
+                        align: CENTER
+                        text: ""
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_send_notice
+              - button:
+                  id: ui_btn_people
+                  width: 140
+                  height: 140
+                  x: 20
+                  y: 60
+                  bg_image_src: img_streamline_ultimate_color_messages_people_user_check_140x140
+                  bg_opa: 0%
+                  outline_opa: 100%
+                  border_color: 0x000000
+                  border_width: 4
+                  outline_color: 0x000000
+                  outline_width: 2
+                  widgets:
+                    - label:
+                        id: ui_btn_people_text
+                        align: CENTER
+                        text: ""
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_people_list
+              - label:
+                  id: ui_lbl_send
+                  long_mode: WRAP
+                  text: "Send"
+                  width: 40%
+                  height: 30
+                  x: 50
+                  y: 383
+                  text_color: 0x39FF14
+                  text_font: montserrat_24
+                  text_align: CENTER
+              - label:
+                  id: ui_lbl_people
+                  long_mode: WRAP
+                  text: "Recipients: 1"
+                  width: 40%
+                  height: 30
+                  x: 60
+                  y: 393
+                  text_color: 0x39FF14
+                  text_font: montserrat_24
+                  text_align: CENTER
+    - id: ui_todo_grocery
+      bg_color: 0x000000
+      layout:
+        type: FLEX
+        flex_flow: COLUMN
+      widgets:
+        - obj:
+            id: ui_cont_top_2
+            width: 100%
+            height: 33%
+            bg_opa: 0%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            widgets:
+              - label:
+                  id: ui_lbl_listen
+                  long_mode: WRAP
+                  text: "Idle"
+                  width: 130
+                  height: 25
+                  x: 129
+                  y: 138
+                  text_color: 0xFFFFFF
+                  text_align: CENTER
+                  text_font: montserrat_18
+              - obj:
+                  id: ui_orb
+                  width: 70
+                  height: 70
+                  x: 154
+                  y: 50
+                  bg_opa: 100%
+                  border_width: 2
+                  pad_top: 0
+                  pad_bottom: 0
+                  pad_left: 0
+                  pad_right: 0
+                  radius: 66
+                  recolor_opa: 0%
+                  bg_color: 0x9C9C9C
+                  border_color: 0x000000
+                  shadow_color: 0xADADAD
+                  shadow_width: 6
+                  shadow_spread: 6
+        - obj:
+            id: ui_cont_mid
+            width: 100%
+            height: 34%
+            bg_opa: 0%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            widgets:
+              - label:
+                  id: ui_lbl_request
+                  long_mode: WRAP
+                  text: !lambda |- 
+                    return id(help_msg);
+                  width: 80%
+                  height: 100%
+                  align: TOP_MID
+                  text_color: 0xFFFFFF
+                  bg_color: 0xC0C0C0
+                  text_font: montserrat_24
+                  bg_opa: 39%
+                  text_align: LEFT
+                  border_width: 1
+                  pad_top: 10
+                  pad_bottom: 10
+                  pad_left: 10
+                  pad_right: 10
+        - obj:
+            id: ui_cont_bot
+            width: 100%
+            height: 33%
+            bg_opa: 0%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            widgets:
+              - label:
+                  id: ui_lbl_flag
+                  long_mode: WRAP
+                  text: "O"
+                  width: 30
+                  height: 30
+                  x: 59
+                  y: 90
+                  text_color: 0xFFFFFF
+                  text_align: CENTER
+                  text_font: montserrat_24
+              - button:
+                  id: ui_btn_wake
+                  width: 100
+                  height: 50
+                  x: 110
+                  y: 80
+                  text_color: 0x000000
+                  text_font: montserrat_24
+                  widgets:
+                    - label:
+                        id: ui_btn_wake_text
+                        align: CENTER
+                        text: "Wake"
+                  on_click:
+                    - then:
+                        - lvgl.label.update: 
+                            id: ui_lbl_listen
+                            text: "Ready"
+                        - script.execute: enable_wake
+                  # on_long_press:
+                  #   then:
+                  #       - lvgl.label.update: 
+                  #           id: ui_lbl_request
+                  #           text: !lambda |-
+                  #                   return id(help_msg);
+              - button:
+                  id: ui_btn_next
+                  width: 100
+                  height: 50
+                  x: 230
+                  y: 80
+                  text_color: 0x000000
+                  widgets:
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        align: CENTER
+                        clickable: false
+                        scrollable: false
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: FLEX
+                          flex_flow: ROW
+                          flex_align_main: CENTER
+                          flex_align_cross: CENTER
+                          pad_column: 6
+                        widgets:
+                          - image:
+                              src: icon_arrow_right_80
+                              image_recolor: 0x000000
+                              image_recolor_opa: 100%
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_screen1
+              - slider:
+                  id: ui_slider_spk
+                  min_value: 0
+                  max_value: 100
+                  mode: NORMAL
+                  value: 60
+                  width: 260
+                  height: 24
+                  x: 120
+                  y: 24
+                  gesture_bubble: false
+                  # "lbl_value" is bound to this control (Bindings, in the designer). Its
+                  # on_value runs lw_ui_slider_spk_drives, which updates it.
+                  on_value:
+                    - then:
+                        - script.execute: lw_ui_slider_spk_drives
+              - label:
+                  id: ui_lbl_value
+                  long_mode: WRAP
+                  text: "60"
+                  width: 54
+                  height: 24
+                  x: 20
+                  y: 24
+                  text_color: 0xFFFFFF
+                  text_font: montserrat_24
+              - image:
+                  id: ui_icon_volume
+                  width: 32
+                  height: 32
+                  x: 70
+                  y: 20
+                  text_color: 0xFFFFFF
+                  src: icon_volume_high_32
+                  image_recolor: 0xFFFFFF
+                  image_recolor_opa: 100%
+    - id: ui_grocery_list
+      bg_opa: 100%
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            id: ui_cont_top_3
+            width: 100%
+            height: 100%
+            scrollable: true
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              flex_align_cross: CENTER
+            bg_opa: 39%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            bg_grad_dir: VER
+            bg_color: 0x000000
+            widgets:
+              - label:
+                  width: 100%
+                  height: 50
+                  text: ""
+              - label:
+                  id: ui_lbl_title
+                  long_mode: WRAP
+                  text: "Grocery List"
+                  width: 100%
+                  height: 42
+                  text_color: 0xFFFFFF
+                  text_font: montserrat_24
+                  text_align: CENTER
+              - label:
+                  id: ui_work_label
+                  long_mode: SCROLL
+                  text: "Grocery List"
+                  width: 275
+                  height: 300
+                  bg_opa: 39%
+                  text_color: 0xFFFFFF
+                  text_font: montserrat_24
+                  bg_color: 0xC0C0C0
+                  pad_top: 10
+                  pad_bottom: 10
+                  pad_left: 10
+                  pad_right: 10
+        - obj:
+            id: ui_cont_right
+            width: 50%
+            height: 20%
+            x: 205
+            y: 402
+            bg_opa: 0%
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            border_width: 0
+            widgets:
+              - button:
+                  id: ui_btn_next_2
+                  width: 100
+                  height: 50
+                  x: 20
+                  y: 15
+                  text_color: 0x000000
+                  widgets:
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        align: CENTER
+                        clickable: false
+                        scrollable: false
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: FLEX
+                          flex_flow: ROW
+                          flex_align_main: CENTER
+                          flex_align_cross: CENTER
+                          pad_column: 6
+                        widgets:
+                          - image:
+                              src: icon_arrow_right_80
+                              image_recolor: 0x000000
+                              image_recolor_opa: 100%
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_screen1
+    - id: ui_people_list
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            id: ui_cont_top_4
+            width: 100%
+            height: 100%
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              flex_align_cross: CENTER
+            bg_opa: 38%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            bg_color: 0x000000
+            bg_grad_dir: VER
+            widgets:
+              - label:
+                  width: 100%
+                  height: 50
+                  text: ""
+              - label:
+                  id: ui_lbl_title_2
+                  long_mode: WRAP
+                  text: "Recipients"
+                  width: 100%
+                  height: 42
+                  text_color: 0xFFFFFF
+                  text_font: montserrat_24
+                  text_align: CENTER
+              - obj:
+                  id: ui_cont_people
+                  width: 380
+                  height: 360
+                  layout:
+                    type: FLEX
+                    flex_flow: COLUMN
+                    flex_align_cross: CENTER
+                  bg_opa: 0%
+                  border_width: 0
+                  pad_top: 10
+                  pad_bottom: 10
+                  pad_left: 10
+                  pad_right: 10
+                  widgets:
+                    - checkbox:
+                        id: ui_cb1
+                        text: "$name_1"
+                        width: 73%
+                        height: 40
+                        x: 21
+                        y: 105
+                        text_font: montserrat_32
+                        text_color: 0x39FF14
+                        on_click:
+                          - lambda: |-
+                              if (x) {
+                                  id(switch_$name_1).turn_on();
+                              } else {
+                                  id(switch_$name_1).turn_off();
+                              }
+                          - script.execute: update_people_count
+                    - checkbox:
+                        id: ui_cb2
+                        text: "$name_2"
+                        width: 73%
+                        height: 40
+                        x: 31
+                        y: 115
+                        text_font: montserrat_32
+                        text_color: 0x39FF14
+                        on_click:
+                          - lambda: |-
+                              if (x) {
+                                  id(switch_$name_2).turn_on();
+                              } else {
+                                  id(switch_$name_2).turn_off();
+                              }
+                          - script.execute: update_people_count
+                    - checkbox:
+                        id: ui_cb3
+                        text: "$name_3"
+                        width: 73%
+                        height: 40
+                        x: 41
+                        y: 125
+                        text_font: montserrat_32
+                        text_color: 0x39FF14
+                        on_click:
+                          - lambda: |-
+                              if (x) {
+                                  id(switch_$name_3).turn_on();
+                              } else {
+                                  id(switch_$name_3).turn_off();
+                              }
+                          - script.execute: update_people_count
+                    - checkbox:
+                        id: ui_cb4
+                        text: "$name_4"
+                        width: 73%
+                        height: 40
+                        x: 51
+                        y: 135
+                        text_font: montserrat_32
+                        text_color: 0x39FF14
+                        on_click:
+                          - lambda: |-
+                              if (x) {
+                                  id(switch_$name_4).turn_on();
+                              } else {
+                                  id(switch_$name_4).turn_off();
+                              }
+                          - script.execute: update_people_count
+        - obj:
+            id: ui_cont_right_2
+            width: 50%
+            height: 20%
+            x: 205
+            y: 402
+            bg_opa: 0%
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            border_width: 0
+            widgets:
+              - button:
+                  id: ui_btn_next_3
+                  width: 100
+                  height: 50
+                  x: 20
+                  y: 15
+                  text_color: 0x000000
+                  widgets:
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        align: CENTER
+                        clickable: false
+                        scrollable: false
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: FLEX
+                          flex_flow: ROW
+                          flex_align_main: CENTER
+                          flex_align_cross: CENTER
+                          pad_column: 6
+                        widgets:
+                          - image:
+                              src: icon_arrow_right_80
+                              image_recolor: 0x000000
+                              image_recolor_opa: 100%
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_screen1
+    - id: ui_send_notice
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            id: ui_cont_top_5
+            width: 100%
+            height: 100%
+            align: CENTER
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              flex_align_cross: CENTER
+            bg_opa: 38%
+            border_width: 0
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            bg_color: 0x000000
+            bg_grad_dir: VER
+            widgets:
+              - label:
+                  width: 100%
+                  height: 50
+                  text: ""
+              - label:
+                  id: ui_lbl_title_3
+                  long_mode: WRAP
+                  text: "Send Grocery List"
+                  width: 100%
+                  height: 42
+                  text_color: 0xFFFFFF
+                  text_font: montserrat_24
+                  text_align: CENTER
+        - button:
+            id: ui_btn_send_notice
+            width: 150
+            height: 100
+            align: CENTER
+            text_font: montserrat_24
+            text_color: 0x000000
+            widgets:
+              - label:
+                  id: ui_btn_send_notice_text
+                  align: CENTER
+                  text: "Send"
+            on_click:
+              - then:
+                  - script.execute: send_notice
+        - obj:
+            id: ui_cont_right_3
+            width: 50%
+            height: 20%
+            x: 205
+            y: 402
+            bg_opa: 0%
+            pad_top: 0
+            pad_bottom: 0
+            pad_left: 0
+            pad_right: 0
+            border_width: 0
+            widgets:
+              - button:
+                  id: ui_btn_next_4
+                  width: 50%
+                  height: 50%
+                  x: 52
+                  y: 25
+                  text_color: 0x000000
+                  widgets:
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        align: CENTER
+                        clickable: false
+                        scrollable: false
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: FLEX
+                          flex_flow: ROW
+                          flex_align_main: CENTER
+                          flex_align_cross: CENTER
+                          pad_column: 6
+                        widgets:
+                          - image:
+                              src: icon_arrow_right_80
+                              image_recolor: 0x000000
+                              image_recolor_opa: 100%
+                  on_click:
+                    - then:
+                        - lvgl.page.show:
+                            id: ui_screen1
+
+################################################################################################
+################################################################################################
+
+#### Note animations is defined within LVGL
+############################################
+  animations:
+    - id: orb_pulse
+      duration: 1.5s        # Time taken for a full pulse cycle (fade in + fade out)
+      auto_start: false      # Automatically begin pulsing on boot
+      loop: true            # Continually repeat the animation
+      timing:
+        - type: round_trip  # Reverses direction halfway through the duration
+        - type: ease_in_out # Smooths out the transition at the peaks and valleys
+      widgets:
+        - id: ui_orb
+          opa:
+            from: 50%        # Dim state (minimum brightness)
+            to: 100%         # Bright state (maximum brightness)
+
+
+####################################################################################################
+####################################################################################################
+                            
+image:
+  - id: img_streamline_ultimate_color_fruit_watermelon_140x140
+    platform: file
+    file: "images/streamline_ultimate_color_fruit_watermelon_140x140.png"
+    type: RGB565
+    transparency: alpha_channel
+  - id: img_streamline_ultimate_color_task_list_to_do_140x140
+    platform: file
+    file: "images/streamline_ultimate_color_task_list_to_do_140x140.png"
+    type: RGB565
+    transparency: alpha_channel
+  - id: img_streamline_ultimate_color_phone_type_140x140
+    platform: file
+    file: "images/streamline_ultimate_color_phone_type_140x140.png"
+    type: RGB565
+    transparency: alpha_channel
+  - id: img_streamline_ultimate_color_messages_people_user_check_140x140
+    platform: file
+    file: "images/streamline_ultimate_color_messages_people_user_check_140x140.png"
+    type: RGB565
+    transparency: alpha_channel
+  - id: icon_arrow_right_80
+    platform: file
+    file: "images/icons/arrow_right_80.png"
+    type: RGB565
+    transparency: alpha_channel
+  - id: icon_volume_high_32
+    platform: file
+    file: "images/icons/volume_high_32.png"
+    type: RGB565
+    transparency: alpha_channel
+
+
+

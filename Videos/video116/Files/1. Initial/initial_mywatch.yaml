@@ -1,0 +1,114 @@
+# Installation method: Home Assistant OS
+# Core: 2026.11.1
+# Supervisor: 2026.11.0
+# Operating System: 18.5
+# Frontend: 20261028.5
+# ESPHome: 2026.10.2
+
+# Created: 11 November 2026
+# KW Services
+# License: MIT
+
+# Board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (Waveshare)
+# Definition: definitions/boards/waveshare_esp32_s3_touch_amoled_2_16/manifest.yaml
+
+esphome:
+  name: mywatch
+  friendly_name: MyWatch
+        
+esp32:
+  variant: esp32s3
+  flash_size: 32MB
+  framework:
+    type: esp-idf
+    advanced:
+      enable_idf_experimental_features: true
+
+psram:
+  mode: octal
+  speed: 80MHz
+  
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret mywatch_api
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: !secret mywatch_ap_ssid
+    password: !secret  mywatch_ap_pwd
+  #use_address: 192.168.68.130
+  manual_ip: 
+    static_ip: 192.168.68.130
+    gateway: 192.168.68.1
+    subnet: 255.255.255.0
+    
+web_server:
+  
+captive_portal:
+
+
+#### Hardware definitions  
+############################################################
+
+spi:
+  - id: spi_display
+    type: quad
+    clk_pin: 11
+    data_pins:
+      - 4
+      - 5
+      - 6
+      - 7
+
+i2c:
+  - id: bus_i2c_gpio_15_14
+    sda: 15
+    scl: 14
+    frequency: 400kHz
+    scan: true
+
+display:
+  - id: panel
+    platform: mipi_spi
+    model: CO5300
+    bus_mode: quad
+    spi_id: spi_display
+    cs_pin: 12
+    reset_pin: 8
+    dimensions:
+      width: 410
+      height: 502
+      offset_width: 22
+      offset_height: 0
+      pad_width: 48
+      pad_height: 0
+    color_order: rgb
+    data_rate: 40MHz
+    auto_clear_enabled: false
+
+touchscreen:
+  - id: touch
+    platform: ft63x6
+    display: panel
+    i2c_id: bus_i2c_gpio_15_14
+    interrupt_pin: 38
+    reset_pin: 9
+    address: 0x38
+
+
+lvgl:
+  displays:
+    - panel
+  touchscreens:
+    - touch
+  default_font: montserrat_24
+  buffer_size: 25%
+

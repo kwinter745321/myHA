@@ -1,0 +1,140 @@
+There are YAML text for four automations in this file.
+Carefully copy the content below to each automation.
+
+
+Add_todo_item
+
+alias: Add_todo_item
+description: ''
+triggers:
+  - trigger: conversation
+    command:
+      - add {item_name} to [my | the] [to-do] list
+conditions: []
+actions:
+  - action: todo.add_item
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      item: '{{trigger.slots.item_name}}'
+mode: single
+
+
+Delete_todo_item
+
+alias: Delete_todo_item
+description: ''
+triggers:
+  - trigger: conversation
+    command:
+      - '[remove | delete] {item_name} from [my | the] list'
+conditions: []
+actions:
+  - action: todo.remove_item
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      item: '{{trigger.slots.item_name}}'
+mode: single
+
+
+
+Display_todo_item
+
+alias: Display_todo_list
+description: ''
+triggers:
+  - trigger: time_pattern
+    seconds: /15
+conditions: []
+actions:
+  - action: todo.get_items
+    metadata: {}
+    target:
+      entity_id: todo.work_list
+    data:
+      status: needs_action
+    response_variable: Work_List_items
+  - variables:
+      grocery_text: >-
+        {% set items = Work_List_items['todo.work_list']['items'] | default([])
+        %} {% if items | length > 0 %}
+          {{ '• ' ~ (items | map(attribute='summary') | list | join('\n• ')) }}
+        {% else %}
+          Empty
+        {% endif %}
+  - if:
+      - condition: template
+        value_template: |
+          {{ grocery_text | trim != states('text.mywatch_work_text') | trim }}
+    then:
+      - action: text.set_value
+        target:
+          entity_id:
+            - text.round146_work_text
+            - text.mywatch_work_text
+        data:
+          value: '{{ grocery_text | trim }}'
+mode: single
+
+
+Send_Grocery_List
+
+
+alias: Send Grocery List
+description: ''
+triggers:
+  - type: turned_on
+    device_id: 5e2c7d3f9400046fbd193030b7efa555
+    entity_id: 7a0796db2e0cd303c8ac6d4151070913
+    domain: binary_sensor
+    trigger: device
+conditions: []
+actions:
+  - if:
+      - condition: state
+        entity_id: switch.mywatch_recipient_alice
+        state: 'on'
+    then:
+      - action: notify.send_message
+        target:
+          device_id: your-device
+        data:
+          title: Grocery List
+          message: '{{ states(''text.mywatch_work_text'') }}'
+  - if:
+      - condition: state
+        entity_id: switch.mywatch_recipient_bob
+        state: 'on'
+    then:
+      - action: notify.send_message
+        target:
+          device_id: your-device
+        data:
+          title: Grocery List
+          message: '{{ states(''text.mywatch_work_text'') }}'
+  - if:
+      - condition: state
+        entity_id: switch.mywatch_recipient_charlie
+        state: 'on'
+    then:
+      - action: notify.send_message
+        target:
+          device_id: your-device
+        data:
+          title: Grocery List
+          message: '{{ states(''text.mywatch_work_text'') }}'
+  - if:
+      - condition: state
+        entity_id: switch.mywatch_recipient_diana
+        state: 'on'
+    then:
+      - action: notify.send_message
+        target:
+          device_id: your-device
+        data:
+          title: Grocery List
+          message: '{{ states(''text.mywatch_work_text'') }}'
+mode: single
