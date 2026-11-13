@@ -718,17 +718,6 @@ script:
           text:
             format: "Count: %d"
             args: [id(people_count)]
-            
-    #### Set all people to checked (future feature)
-    ###############################################
-  - id: select_all_people
-    then:
-      - switch.toggle: switch_$name_1
-      - switch.toggle: switch_$name_2
-      - switch.toggle: switch_$name_3
-      - switch.toggle: switch_$name_4
-      - script.execute: update_people_count
-
 
 #########################################################################################################
 #########################################################################################################
