@@ -8,10 +8,10 @@ This is video 116 on a Home Assistant ESPHome/LVGL embedded solution. In today�
 Our hardware is the Waveshare ESP32-S3 Touch-AMOLED-2.06 device. 
  
 In this video, 
-    • Demonstrate the Smart Watch and notifications.
-    • Review the steps to deploy the software.
-    • Discuss technical aspects of the I2S Audio.
-    • Review the screen design and actions across the screens.
+ - Demonstrate the Smart Watch and notifications.
+ - Review the steps to deploy the software.
+ - Discuss technical aspects of the I2S Audio.
+ - Review the screen design and actions across the screens.
 
 The code for this video is available at the GitHub site:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video116
