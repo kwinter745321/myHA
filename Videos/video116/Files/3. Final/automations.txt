@@ -1,7 +1,7 @@
 There are YAML text for four automations in this file.
 Carefully copy the content below to each automation.
 
-
+#################################
 Add_todo_item
 
 alias: Add_todo_item
@@ -20,7 +20,7 @@ actions:
       item: '{{trigger.slots.item_name}}'
 mode: single
 
-
+##############################################
 Delete_todo_item
 
 alias: Delete_todo_item
@@ -40,7 +40,7 @@ actions:
 mode: single
 
 
-
+#####################################################
 Display_todo_item
 
 alias: Display_todo_list
@@ -79,62 +79,38 @@ actions:
           value: '{{ grocery_text | trim }}'
 mode: single
 
-
+############################################
 Send_Grocery_List
 
+##############
+NOTE: You MUST use Visual Editor
+##############
 
 alias: Send Grocery List
-description: ''
-triggers:
-  - type: turned_on
-    device_id: 5e2c7d3f9400046fbd193030b7efa555
-    entity_id: 7a0796db2e0cd303c8ac6d4151070913
-    domain: binary_sensor
-    trigger: device
-conditions: []
-actions:
-  - if:
-      - condition: state
-        entity_id: switch.mywatch_recipient_alice
-        state: 'on'
-    then:
-      - action: notify.send_message
-        target:
-          device_id: your-device
-        data:
-          title: Grocery List
-          message: '{{ states(''text.mywatch_work_text'') }}'
-  - if:
-      - condition: state
-        entity_id: switch.mywatch_recipient_bob
-        state: 'on'
-    then:
-      - action: notify.send_message
-        target:
-          device_id: your-device
-        data:
-          title: Grocery List
-          message: '{{ states(''text.mywatch_work_text'') }}'
-  - if:
-      - condition: state
-        entity_id: switch.mywatch_recipient_charlie
-        state: 'on'
-    then:
-      - action: notify.send_message
-        target:
-          device_id: your-device
-        data:
-          title: Grocery List
-          message: '{{ states(''text.mywatch_work_text'') }}'
-  - if:
-      - condition: state
-        entity_id: switch.mywatch_recipient_diana
-        state: 'on'
-    then:
-      - action: notify.send_message
-        target:
-          device_id: your-device
-        data:
-          title: Grocery List
-          message: '{{ states(''text.mywatch_work_text'') }}'
-mode: single
+
+TRIGGER
+
+entity:  MyWatch binary_sensor Send_Trigger
+state:   From OFF to ON
+
+Conditions: SKIP
+
+ACTIONS
+
+IF-THEN
+  IF
+	condition: switch is: ON
+	target:    mywatch_recipient_alice
+  	
+  THEN
+  	action:  notify.send_message
+	target:  alice's smart phone with HA
+	title:   Grocery List
+	message:  {{ states('text.mywatch_work_text') }}
+
+ADD_ACTION
+	switch.mywatch_recipient_bob
+ADD_ACTION
+	switch.mywatch_recipient_charlie
+ADD_ACTION
+	switch.mywatch_recipient_diane
