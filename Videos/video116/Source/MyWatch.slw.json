@@ -1,0 +1,1942 @@
+{
+  "version": 1,
+  "name": "MyWatch",
+  "created": "2026-11-06 07:38",
+  "target": "esphome",
+  "lvglVersion": "9",
+  "theme": {
+    "mode": "light",
+    "primary": "#2196F3",
+    "secondary": "#EF6C00",
+    "fontDefault": 14
+  },
+  "hardware": {
+    "board": "waveshare-s3-touch-amoled-206",
+    "mcu": "esp32s3",
+    "gfxLib": "arduino_gfx",
+    "psram": true,
+    "flashMB": 16,
+    "psramMB": 8,
+    "partitions": "big_app",
+    "usbCdc": true,
+    "display": {
+      "driver": "co5300",
+      "interface": "qspi",
+      "rgbOrder": "rgb",
+      "width": 410,
+      "height": 502,
+      "rotation": 0,
+      "colorDepth": 16,
+      "invert": false,
+      "cornerRadius": 0,
+      "colOffset": 22,
+      "rowOffset": 0,
+      "pins": {
+        "sck": 11,
+        "d0": 4,
+        "d1": 5,
+        "d2": 6,
+        "d3": 7,
+        "cs": 12,
+        "rst": 8,
+        "te": 13
+      },
+      "opts": {
+        "freqMhz": 40,
+        "spiHost": "SPI2_HOST"
+      },
+      "orderCorrected": true,
+      "invertCorrected": true,
+      "timingCorrected": true,
+      "controllerCorrected": true
+    },
+    "touch": {
+      "driver": "ft3168",
+      "pins": {
+        "sda": 15,
+        "scl": 14,
+        "int": 38,
+        "rst": 9
+      },
+      "opts": {
+        "i2cAddr": "0x38",
+        "freqKhz": 400,
+        "sharedI2C": true
+      },
+      "swapXY": false,
+      "invertX": false,
+      "invertY": false,
+      "swapCorrected": true,
+      "directionCorrected": true
+    },
+    "inputs": [],
+    "extraSetup": [],
+    "buses": [
+      {
+        "id": "bus_waveshare_s3_touch_amoled_206_i2c",
+        "board": "waveshare-s3-touch-amoled-206",
+        "kind": "i2c",
+        "name": "I2C (GPIO 15 / 14)",
+        "pins": {
+          "sda": 15,
+          "scl": 14
+        },
+        "opts": {
+          "freqKhz": 400,
+          "pullups": false
+        }
+      }
+    ],
+    "peripherals": [],
+    "ioExtenders": [],
+    "analogInputs": [],
+    "digitalIO": [
+      {
+        "id": "dio_waveshare_s3_touch_amoled_206_boot",
+        "source": "gpio",
+        "pin": 0,
+        "extenderId": "",
+        "extPin": 0,
+        "board": "waveshare-s3-touch-amoled-206",
+        "dir": "in",
+        "name": "BOOTButton",
+        "pullup": true,
+        "activeLow": true,
+        "debounceMs": 25,
+        "initial": false
+      },
+      {
+        "id": "dio_waveshare_s3_touch_amoled_206_pwr",
+        "source": "gpio",
+        "pin": 10,
+        "extenderId": "",
+        "extPin": 0,
+        "board": "waveshare-s3-touch-amoled-206",
+        "dir": "in",
+        "name": "PWRButton",
+        "pullup": false,
+        "activeLow": false,
+        "debounceMs": 25,
+        "initial": false
+      }
+    ],
+    "audio": {
+      "enabled": true,
+      "output": "es8311",
+      "pins": {
+        "mclk": 16,
+        "bclk": 41,
+        "lrclk": 45,
+        "din": 40,
+        "pa": 46
+      },
+      "busId": "bus_waveshare_s3_touch_amoled_206_i2c",
+      "addr": "0x18",
+      "codec": "mp3",
+      "volume": 60,
+      "bufferKb": 32,
+      "ownTask": true,
+      "input": {
+        "enabled": true,
+        "kind": "es7210",
+        "pins": {
+          "data": 42,
+          "bclk": -1,
+          "ws": -1
+        },
+        "gainDb": 30,
+        "channel": "both",
+        "addr": "0x40",
+        "speech": {
+          "enabled": false,
+          "wake": "hiesp",
+          "commands": []
+        }
+      },
+      "paActiveLow": false
+    }
+  },
+  "screens": [
+    {
+      "id": "scr_ndpdyae",
+      "name": "Screen1",
+      "type": "screen",
+      "width": 410,
+      "height": 502,
+      "params": {
+        "temporary": false,
+        "noExport": false
+      },
+      "styles": {
+        "main:default": {
+          "bgColor": "#000000",
+          "textColor": "#FFFFFF",
+          "outlineColor": "#000000",
+          "outlineWidth": 2,
+          "borderColor": "#000000",
+          "borderWidth": 4
+        }
+      },
+      "flags": {},
+      "events": [],
+      "children": [
+        {
+          "id": "w_vdq91ik8",
+          "type": "container",
+          "name": "cont_top",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 502,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 50,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "bgColor": "#000000",
+              "bgGradDir": "LV_GRAD_DIR_VER",
+              "borderWidth": 0
+            }
+          },
+          "flags": {},
+          "layout": {
+            "layout": "flex",
+            "flexFlow": "LV_FLEX_FLOW_ROW_WRAP",
+            "flexMain": "LV_FLEX_ALIGN_CENTER",
+            "flexCross": "LV_FLEX_ALIGN_CENTER",
+            "flexTrack": "LV_FLEX_ALIGN_CENTER"
+          },
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_vdq91l92",
+              "type": "button",
+              "name": "btn_grocery",
+              "x": 278,
+              "y": 181,
+              "w": 140,
+              "h": 140,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "",
+                "iconPos": "left",
+                "iconSize": 20,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "bgImageSrc": "as_vfln14n",
+                  "bgOpa": 0,
+                  "outlineOpa": 255,
+                  "outlineColor": "#000000",
+                  "outlineWidth": 2,
+                  "borderColor": "#000000",
+                  "borderWidth": 4
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_jdh21i9j",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_yac92y2h",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_vdq91ks8",
+              "type": "button",
+              "name": "btn_list",
+              "x": 0,
+              "y": 40,
+              "w": 140,
+              "h": 140,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "",
+                "iconPos": "left",
+                "iconSize": 20,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "bgImageSrc": "as_vipy15vk",
+                  "bgOpa": 0,
+                  "outlineOpa": 255,
+                  "borderColor": "#000000",
+                  "borderWidth": 4,
+                  "outlineColor": "#000000",
+                  "outlineWidth": 2
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_3ez956cr",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_8iak1axh",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_mkue58fm",
+              "type": "label",
+              "name": "lbl_grocery",
+              "x": 40,
+              "y": 373,
+              "w": 164,
+              "h": 30,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Grocery",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#39FF14",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 40
+            },
+            {
+              "id": "w_mn7x59ou",
+              "type": "label",
+              "name": "lbl_list",
+              "x": 250,
+              "y": 336,
+              "w": 164,
+              "h": 30,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "items: 0",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#39FF14",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 40
+            },
+            {
+              "id": "w_o1hk10ld",
+              "type": "button",
+              "name": "btn_send",
+              "x": 10,
+              "y": 50,
+              "w": 140,
+              "h": 140,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "",
+                "iconPos": "left",
+                "iconSize": 20,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "bgImageSrc": "as_vmni165a",
+                  "bgOpa": 0,
+                  "outlineOpa": 255,
+                  "borderColor": "#000000",
+                  "borderWidth": 4,
+                  "outlineColor": "#000000",
+                  "outlineWidth": 2
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_2qlz3pon",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_zr9k2dzf",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_o87b12fz",
+              "type": "button",
+              "name": "btn_people",
+              "x": 20,
+              "y": 60,
+              "w": 140,
+              "h": 140,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "",
+                "iconPos": "left",
+                "iconSize": 20,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "bgImageSrc": "as_vqjk17j2",
+                  "bgOpa": 0,
+                  "outlineOpa": 255,
+                  "borderColor": "#000000",
+                  "borderWidth": 4,
+                  "outlineColor": "#000000",
+                  "outlineWidth": 2
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_o87b13yt",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_ktcm1kti",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_wya2186e",
+              "type": "label",
+              "name": "lbl__send",
+              "x": 50,
+              "y": 383,
+              "w": 164,
+              "h": 30,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Send",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#39FF14",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 40
+            },
+            {
+              "id": "w_x0lt19gc",
+              "type": "label",
+              "name": "lbl_people",
+              "x": 60,
+              "y": 393,
+              "w": 164,
+              "h": 30,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Recipients: 1",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#39FF14",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 40
+            }
+          ],
+          "wPct": 100,
+          "hPct": 100
+        }
+      ]
+    },
+    {
+      "id": "scr_yac92y2h",
+      "name": "todo_grocery",
+      "type": "screen",
+      "width": 410,
+      "height": 502,
+      "params": {
+        "temporary": false,
+        "noExport": false
+      },
+      "styles": {
+        "main:default": {
+          "bgColor": "#000000"
+        }
+      },
+      "flags": {},
+      "events": [],
+      "children": [
+        {
+          "id": "w_gmc6kpj",
+          "type": "container",
+          "name": "cont_top",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 165,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_yac934p4",
+              "type": "label",
+              "name": "lbl_listen",
+              "x": 129,
+              "y": 128,
+              "w": 130,
+              "h": 25,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Idle",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textAlign": "LV_TEXT_ALIGN_CENTER",
+                  "textFont": 16
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": []
+            },
+            {
+              "id": "w_kab514f",
+              "type": "container",
+              "name": "orb",
+              "x": 154,
+              "y": 30,
+              "w": 80,
+              "h": 80,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {},
+              "styles": {
+                "main:default": {
+                  "bgOpa": 255,
+                  "borderWidth": 2,
+                  "padTop": 0,
+                  "padBottom": 0,
+                  "padLeft": 0,
+                  "padRight": 0,
+                  "radius": 66,
+                  "recolorOpa": 0,
+                  "bgColor": "#9C9C9C",
+                  "borderColor": "#000000",
+                  "shadowColor": "#ADADAD",
+                  "shadowWidth": 6,
+                  "shadowSpread": 6
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "children": []
+            }
+          ],
+          "wPct": 100,
+          "hPct": 33
+        },
+        {
+          "id": "w_h115lzh",
+          "type": "container",
+          "name": "cont_mid",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 170,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_yac933m2",
+              "type": "label",
+              "name": "lbl_request",
+              "x": 0,
+              "y": 0,
+              "w": 328,
+              "h": 170,
+              "align": "LV_ALIGN_TOP_MID",
+              "widthMode": "pct",
+              "heightMode": "pct",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Press \"Wake\", then say \"Okay Nabu\", wait for \"Listening\", and ask \"What time is it?\"",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "bgColor": "#C0C0C0",
+                  "textFont": 24,
+                  "bgOpa": 99,
+                  "textAlign": "LV_TEXT_ALIGN_LEFT",
+                  "borderWidth": 1,
+                  "padTop": 10,
+                  "padBottom": 10,
+                  "padLeft": 10,
+                  "padRight": 10
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 80,
+              "hPct": 100
+            }
+          ],
+          "wPct": 100,
+          "hPct": 34
+        },
+        {
+          "id": "w_ingxmb",
+          "type": "container",
+          "name": "cont_bot",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 165,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_yac9328",
+              "type": "label",
+              "name": "lbl_flag",
+              "x": 59,
+              "y": 90,
+              "w": 30,
+              "h": 30,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "O",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textAlign": "LV_TEXT_ALIGN_CENTER",
+                  "textFont": 24
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": []
+            },
+            {
+              "id": "w_yac931iv",
+              "type": "button",
+              "name": "btn_wake",
+              "x": 110,
+              "y": 80,
+              "w": 100,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "Wake",
+                "icon": "",
+                "iconPos": "left",
+                "iconSize": 20,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#000000",
+                  "textFont": 24
+                }
+              },
+              "flags": {
+                "LV_OBJ_FLAG_CHECKABLE": false
+              },
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_71rekj2",
+                  "trigger": "CLICKED",
+                  "action": "call_function",
+                  "params": {
+                    "funcName": "enable_wake",
+                    "noExport": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_yac939jp",
+              "type": "button",
+              "name": "btn_next",
+              "x": 230,
+              "y": 80,
+              "w": 100,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "arrow-right",
+                "iconPos": "left",
+                "iconSize": 80,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#000000"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_rnda60p",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_ndpdyae",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            },
+            {
+              "id": "w_yac92zcv",
+              "type": "slider",
+              "name": "slider_spk",
+              "x": 120,
+              "y": 24,
+              "w": 260,
+              "h": 24,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "min": 0,
+                "max": 100,
+                "mode": "LV_SLIDER_MODE_NORMAL",
+                "value": 60,
+                "valueLeft": 0
+              },
+              "styles": {},
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": []
+            },
+            {
+              "id": "w_yac9306z",
+              "type": "label",
+              "name": "lbl_value",
+              "x": 20,
+              "y": 24,
+              "w": 54,
+              "h": 24,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "60",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textFont": 24
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [
+                {
+                  "id": "bind_tiio2xxw",
+                  "source": "widget",
+                  "variableId": "var_cxz8gqf",
+                  "sourceNodeId": "w_yac92zcv",
+                  "sourceProperty": "value",
+                  "property": "text",
+                  "seriesIndex": 0,
+                  "direction": "read",
+                  "format": "",
+                  "prefix": "",
+                  "postfix": "",
+                  "formula": ""
+                }
+              ]
+            },
+            {
+              "id": "w_6t8xujl",
+              "type": "icon",
+              "name": "Icon_volume",
+              "x": 70,
+              "y": 20,
+              "w": 32,
+              "h": 32,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "icon": "volume-high",
+                "size": 32
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": []
+            }
+          ],
+          "wPct": 100,
+          "hPct": 33
+        }
+      ],
+      "layout": {
+        "layout": "flex",
+        "flexFlow": "LV_FLEX_FLOW_COLUMN"
+      }
+    },
+    {
+      "id": "scr_8iak1axh",
+      "name": "grocery_list",
+      "type": "screen",
+      "width": 410,
+      "height": 502,
+      "params": {
+        "temporary": false,
+        "noExport": false
+      },
+      "styles": {
+        "main:default": {
+          "bgOpa": 255,
+          "bgColor": "#000000"
+        }
+      },
+      "flags": {},
+      "events": [],
+      "children": [
+        {
+          "id": "w_96r21bl0",
+          "type": "container",
+          "name": "cont_top",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 502,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 99,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "bgGradDir": "LV_GRAD_DIR_VER",
+              "bgColor": "#000000"
+            }
+          },
+          "flags": {
+            "LV_OBJ_FLAG_SCROLLABLE": true
+          },
+          "layout": {
+            "layout": "flex",
+            "flexFlow": "LV_FLEX_FLOW_COLUMN",
+            "flexCross": "LV_FLEX_ALIGN_CENTER"
+          },
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_ridsf5i",
+              "type": "container",
+              "name": "cont_fill",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {},
+              "styles": {
+                "main:default": {
+                  "bgOpa": 0,
+                  "borderWidth": 0,
+                  "padTop": 0,
+                  "padBottom": 0,
+                  "padLeft": 0,
+                  "padRight": 0
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "children": [],
+              "wPct": 100
+            },
+            {
+              "id": "w_cpjk13uj",
+              "type": "label",
+              "name": "lbl_title",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 42,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Grocery List",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 100
+            },
+            {
+              "id": "w_cabn1ehh",
+              "type": "label",
+              "name": "work_label",
+              "x": 0,
+              "y": 0,
+              "w": 275,
+              "h": 300,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_SCROLL",
+                "text": "Grocery List",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "bgOpa": 99,
+                  "textColor": "#FFFFFF",
+                  "textFont": 24,
+                  "bgColor": "#C0C0C0",
+                  "padTop": 10,
+                  "padBottom": 10,
+                  "padLeft": 10,
+                  "padRight": 10
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": []
+            }
+          ],
+          "wPct": 100,
+          "hPct": 100
+        },
+        {
+          "id": "w_baey1ceb",
+          "type": "container",
+          "name": "cont_right",
+          "x": 205,
+          "y": 402,
+          "w": 205,
+          "h": 100,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "borderWidth": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_baey1dp5",
+              "type": "button",
+              "name": "btn_next",
+              "x": 20,
+              "y": 15,
+              "w": 100,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "arrow-right",
+                "iconPos": "left",
+                "iconSize": 80,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#000000"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_hl461ht",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_ndpdyae",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            }
+          ],
+          "wPct": 50,
+          "hPct": 20
+        }
+      ]
+    },
+    {
+      "id": "scr_ktcm1kti",
+      "name": "people_list",
+      "type": "screen",
+      "width": 410,
+      "height": 502,
+      "params": {
+        "temporary": false,
+        "noExport": false
+      },
+      "styles": {
+        "main:default": {
+          "bgColor": "#000000"
+        }
+      },
+      "flags": {},
+      "events": [],
+      "children": [
+        {
+          "id": "w_lwuv1ldt",
+          "type": "container",
+          "name": "cont_top",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 502,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 97,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "bgColor": "#000000",
+              "bgGradDir": "LV_GRAD_DIR_VER"
+            }
+          },
+          "flags": {},
+          "layout": {
+            "layout": "flex",
+            "flexFlow": "LV_FLEX_FLOW_COLUMN",
+            "flexCross": "LV_FLEX_ALIGN_CENTER"
+          },
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_to7xg3o",
+              "type": "container",
+              "name": "cont_fill",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {},
+              "styles": {
+                "main:default": {
+                  "bgOpa": 0,
+                  "borderWidth": 0,
+                  "padTop": 0,
+                  "padBottom": 0,
+                  "padLeft": 0,
+                  "padRight": 0
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "children": [],
+              "wPct": 100
+            },
+            {
+              "id": "w_l1jr14ll",
+              "type": "label",
+              "name": "lbl_title",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 42,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Recipients",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 100
+            },
+            {
+              "id": "w_qxh21mjj",
+              "type": "container",
+              "name": "cont_people",
+              "x": 0,
+              "y": 0,
+              "w": 380,
+              "h": 360,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {},
+              "styles": {
+                "main:default": {
+                  "bgOpa": 0,
+                  "borderWidth": 0,
+                  "padTop": 10,
+                  "padBottom": 10,
+                  "padLeft": 10,
+                  "padRight": 10
+                }
+              },
+              "flags": {},
+              "layout": {
+                "layout": "flex",
+                "flexFlow": "LV_FLEX_FLOW_COLUMN",
+                "flexCross": "LV_FLEX_ALIGN_CENTER"
+              },
+              "events": [],
+              "bindings": [],
+              "children": [
+                {
+                  "id": "w_rstw1nvk",
+                  "type": "checkbox",
+                  "name": "cb1",
+                  "x": 21,
+                  "y": 105,
+                  "w": 262,
+                  "h": 40,
+                  "align": "LV_ALIGN_TOP_LEFT",
+                  "widthMode": "pct",
+                  "heightMode": "px",
+                  "hidden": false,
+                  "locked": false,
+                  "params": {
+                    "text": "$name_1",
+                    "checked": true,
+                    "translate": false
+                  },
+                  "styles": {
+                    "main:default": {
+                      "textFont": 32,
+                      "textColor": "#39FF14"
+                    }
+                  },
+                  "flags": {},
+                  "layout": {},
+                  "events": [],
+                  "bindings": [],
+                  "wPct": 73
+                },
+                {
+                  "id": "w_wvgi27n",
+                  "type": "checkbox",
+                  "name": "cb2",
+                  "x": 31,
+                  "y": 115,
+                  "w": 262,
+                  "h": 40,
+                  "align": "LV_ALIGN_TOP_LEFT",
+                  "widthMode": "pct",
+                  "heightMode": "px",
+                  "hidden": false,
+                  "locked": false,
+                  "params": {
+                    "text": "$name_2",
+                    "checked": false,
+                    "translate": false
+                  },
+                  "styles": {
+                    "main:default": {
+                      "textFont": 32,
+                      "textColor": "#39FF14"
+                    }
+                  },
+                  "flags": {},
+                  "layout": {},
+                  "events": [],
+                  "bindings": [],
+                  "wPct": 73
+                },
+                {
+                  "id": "w_wykx28s1",
+                  "type": "checkbox",
+                  "name": "cb3",
+                  "x": 41,
+                  "y": 125,
+                  "w": 262,
+                  "h": 40,
+                  "align": "LV_ALIGN_TOP_LEFT",
+                  "widthMode": "pct",
+                  "heightMode": "px",
+                  "hidden": false,
+                  "locked": false,
+                  "params": {
+                    "text": "$name_3",
+                    "checked": false,
+                    "translate": false
+                  },
+                  "styles": {
+                    "main:default": {
+                      "textFont": 32,
+                      "textColor": "#39FF14"
+                    }
+                  },
+                  "flags": {},
+                  "layout": {},
+                  "events": [],
+                  "bindings": [],
+                  "wPct": 73
+                },
+                {
+                  "id": "w_x0td29n5",
+                  "type": "checkbox",
+                  "name": "cb4",
+                  "x": 51,
+                  "y": 135,
+                  "w": 262,
+                  "h": 40,
+                  "align": "LV_ALIGN_TOP_LEFT",
+                  "widthMode": "pct",
+                  "heightMode": "px",
+                  "hidden": false,
+                  "locked": false,
+                  "params": {
+                    "text": "$name_4",
+                    "checked": false,
+                    "translate": false
+                  },
+                  "styles": {
+                    "main:default": {
+                      "textFont": 32,
+                      "textColor": "#39FF14"
+                    }
+                  },
+                  "flags": {},
+                  "layout": {},
+                  "events": [],
+                  "bindings": [],
+                  "wPct": 73
+                }
+              ]
+            }
+          ],
+          "wPct": 100,
+          "hPct": 100
+        },
+        {
+          "id": "w_y42p2a86",
+          "type": "container",
+          "name": "cont_right",
+          "x": 205,
+          "y": 402,
+          "w": 205,
+          "h": 100,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "borderWidth": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_y42p2bm6",
+              "type": "button",
+              "name": "btn_next",
+              "x": 20,
+              "y": 15,
+              "w": 100,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "px",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "arrow-right",
+                "iconPos": "left",
+                "iconSize": 80,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#000000"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_yesg2cxc",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_ndpdyae",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": []
+            }
+          ],
+          "wPct": 50,
+          "hPct": 20
+        }
+      ]
+    },
+    {
+      "id": "scr_zr9k2dzf",
+      "name": "send_notice",
+      "type": "screen",
+      "width": 410,
+      "height": 502,
+      "params": {
+        "temporary": false,
+        "noExport": false
+      },
+      "styles": {
+        "main:default": {
+          "bgColor": "#000000"
+        }
+      },
+      "flags": {},
+      "events": [],
+      "children": [
+        {
+          "id": "w_1iwv2x4h",
+          "type": "container",
+          "name": "cont_top",
+          "x": 0,
+          "y": 0,
+          "w": 410,
+          "h": 502,
+          "align": "LV_ALIGN_CENTER",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 97,
+              "borderWidth": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "bgColor": "#000000",
+              "bgGradDir": "LV_GRAD_DIR_VER"
+            }
+          },
+          "flags": {},
+          "layout": {
+            "layout": "flex",
+            "flexFlow": "LV_FLEX_FLOW_COLUMN",
+            "flexCross": "LV_FLEX_ALIGN_CENTER"
+          },
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_eyeshjz",
+              "type": "container",
+              "name": "cont_fill",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {},
+              "styles": {
+                "main:default": {
+                  "bgOpa": 0,
+                  "borderWidth": 0,
+                  "padTop": 0,
+                  "padBottom": 0,
+                  "padLeft": 0,
+                  "padRight": 0
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "children": [],
+              "wPct": 100
+            },
+            {
+              "id": "w_qpsu15e5",
+              "type": "label",
+              "name": "lbl_title",
+              "x": 0,
+              "y": 0,
+              "w": 410,
+              "h": 42,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "px",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "longMode": "LV_LABEL_LONG_WRAP",
+                "text": "Send Grocery List",
+                "recolor": false,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#FFFFFF",
+                  "textFont": 24,
+                  "textAlign": "LV_TEXT_ALIGN_CENTER"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [],
+              "bindings": [],
+              "wPct": 100
+            }
+          ],
+          "wPct": 100,
+          "hPct": 100
+        },
+        {
+          "id": "w_21le3ovk",
+          "type": "button",
+          "name": "btn_send_notice",
+          "x": 0,
+          "y": 0,
+          "w": 150,
+          "h": 100,
+          "align": "LV_ALIGN_CENTER",
+          "widthMode": "px",
+          "heightMode": "px",
+          "hidden": false,
+          "locked": false,
+          "params": {
+            "text": "Send",
+            "icon": "",
+            "iconPos": "left",
+            "iconSize": 20,
+            "iconGap": 6,
+            "translate": false
+          },
+          "styles": {
+            "main:default": {
+              "textFont": 24,
+              "textColor": "#000000"
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [
+            {
+              "id": "ev_3zt7fnb",
+              "trigger": "CLICKED",
+              "action": "call_function",
+              "params": {
+                "funcName": "send_notice",
+                "noExport": false
+              }
+            }
+          ],
+          "bindings": [],
+          "children": []
+        },
+        {
+          "id": "w_1iwv33bu",
+          "type": "container",
+          "name": "cont_right",
+          "x": 205,
+          "y": 402,
+          "w": 205,
+          "h": 100,
+          "align": "LV_ALIGN_TOP_LEFT",
+          "widthMode": "pct",
+          "heightMode": "pct",
+          "hidden": false,
+          "locked": false,
+          "params": {},
+          "styles": {
+            "main:default": {
+              "bgOpa": 0,
+              "padTop": 0,
+              "padBottom": 0,
+              "padLeft": 0,
+              "padRight": 0,
+              "borderWidth": 0
+            }
+          },
+          "flags": {},
+          "layout": {},
+          "events": [],
+          "bindings": [],
+          "children": [
+            {
+              "id": "w_1iwv34mc",
+              "type": "button",
+              "name": "btn_next",
+              "x": 52,
+              "y": 25,
+              "w": 102,
+              "h": 50,
+              "align": "LV_ALIGN_TOP_LEFT",
+              "widthMode": "pct",
+              "heightMode": "pct",
+              "hidden": false,
+              "locked": false,
+              "params": {
+                "text": "",
+                "icon": "arrow-right",
+                "iconPos": "left",
+                "iconSize": 80,
+                "iconGap": 6,
+                "translate": false
+              },
+              "styles": {
+                "main:default": {
+                  "textColor": "#000000"
+                }
+              },
+              "flags": {},
+              "layout": {},
+              "events": [
+                {
+                  "id": "ev_4jlq3ryu",
+                  "trigger": "CLICKED",
+                  "action": "change_screen",
+                  "params": {
+                    "screen": "scr_ndpdyae",
+                    "fadeMode": "LV_SCR_LOAD_ANIM_NONE",
+                    "speed": 500,
+                    "delay": 0,
+                    "autoDelete": false
+                  }
+                }
+              ],
+              "bindings": [],
+              "children": [],
+              "wPct": 50,
+              "hPct": 50
+            }
+          ],
+          "wPct": 50,
+          "hPct": 20
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "as_vfln14n",
+      "name": "streamline_ultimate_color_fruit_watermelon_140x140.png",
+      "varName": "ui_img_streamline_ultimate_color_fruit_watermelon_140x140",
+      "dataUrl": "data:image/png;base64,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",
+      "width": 140,
+      "height": 140,
+      "storage": "fs",
+      "format": "RGB565A8",
+      "path": "streamline_ultimate_color_fruit_watermelon_140x140.bin"
+    },
+    {
+      "id": "as_vipy15vk",
+      "name": "streamline_ultimate_color_task_list_to_do_140x140.png",
+      "varName": "ui_img_streamline_ultimate_color_task_list_to_do_140x140",
+      "dataUrl": "data:image/png;base64,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",
+      "width": 140,
+      "height": 140,
+      "storage": "fs",
+      "format": "RGB565A8",
+      "path": "streamline_ultimate_color_task_list_to_do_140x140.bin"
+    },
+    {
+      "id": "as_vmni165a",
+      "name": "streamline_ultimate_color_phone_type_140x140.png",
+      "varName": "ui_img_streamline_ultimate_color_phone_type_140x140",
+      "dataUrl": "data:image/png;base64,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",
+      "width": 140,
+      "height": 140,
+      "storage": "fs",
+      "format": "RGB565A8",
+      "path": "streamline_ultimate_color_phone_type_140x140.bin"
+    },
+    {
+      "id": "as_vqjk17j2",
+      "name": "streamline_ultimate_color_messages_people_user_check_140x140.png",
+      "varName": "ui_img_streamline_ultimate_color_messages_people_user_check_140x140",
+      "dataUrl": "data:image/png;base64,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",
+      "width": 140,
+      "height": 140,
+      "storage": "fs",
+      "format": "RGB565A8",
+      "path": "streamline_ultimate_color_messages_people_user_check_140x140.bin"
+    }
+  ],
+  "fonts": [],
+  "fs": {
+    "type": "spiffs",
+    "letter": "S",
+    "autoFormat": true
+  },
+  "variables": [
+    {
+      "id": "var_cxz8gqf",
+      "name": "value1",
+      "type": "float",
+      "initial": 0,
+      "unit": "",
+      "decimals": 1,
+      "min": 0,
+      "max": 100,
+      "source": {
+        "kind": "none",
+        "ref": "",
+        "channel": ""
+      },
+      "formula": "",
+      "persist": false
+    }
+  ],
+  "automations": [],
+  "config": [],
+  "userCode": {
+    "hooks": false
+  },
+  "exportOpts": {
+    "uiPrefix": "ui",
+    "includeSketch": true,
+    "includeConfig": true,
+    "includePlatformIO": true,
+    "includeLvConf": true,
+    "bufferLines": 40,
+    "doubleBuffer": true,
+    "useDMA": true,
+    "psramBuffer": false,
+    "esphome": {
+      "homeAssistant": false,
+      "bufferSize": "25%"
+    }
+  },
+  "cardLogs": [],
+  "webSources": [],
+  "spectrumListen": true
+}

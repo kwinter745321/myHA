@@ -1,6 +1,6 @@
 # README.md - Video116
 
-13 November 2026
+14 November 2026
 
 # Scope
 This is video 116 on a Home Assistant ESPHome/LVGL embedded solution. In today’s video we configure ESPHome and Home Assistant to provide a portable solution to managing a shareable Grocery List for a group of people.  It features a high-resolution 410x502 pixel capacitive touch display and an integrated lithium battery.  Furthermore, the inclusion of a built-in speaker and dual microphones allows for sophisticated voice-command processing, making it an ideal candidate for testing the Local AI capabilities of Home Assistant.  
