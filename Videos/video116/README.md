@@ -13,6 +13,17 @@ In this video,
  - Discuss technical aspects of the I2S Audio.
  - Review the screen design and actions across the screens.
 
+## Important Sections:
+ - Unboxing 			      05:52
+ - Provision  			    09:24
+ - Firmware   			    11:50
+ - Assets               16:00
+ - HA Components 			  23:30
+ - ToDo List            26:52
+ - Automations        	27:30
+ - Fourth Automation 		31:00
+ - Summary              45:54
+
 The code for this video is available at the GitHub site:
 https://github.com/kwinter745321/myHA/tree/main/Videos/video116
 
