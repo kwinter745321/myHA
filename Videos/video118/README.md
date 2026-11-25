@@ -25,3 +25,9 @@ https://github.com/kwinter745321/myHA/tree/main/Videos/video118
 
 # Files
 
+ - Firmware
+     - There is an info_xxx.txt file that provides the final statements from the build.  It provides the syntax for the esptool command to use the various bin files to flash the Xiao ESP32-C5 device.
+
+  - YAML
+      - smartc5.yaml   rebuilt the ESPHome device (used in Video107) to verify it still builds with the latest home Assistant and its APPs.
+      
